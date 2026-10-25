@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Virtual Microscope Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>html{color-scheme:light dark}body{margin:0}</style>
+<style>
+/* Layout: eyepiece view, objectives and controls on the left; slide library, specimen notes and notebook on the right. */
+:root{
+  --bg:#eaf1f1; --surface:#ffffff; --ink:#10222b; --muted:#566a73; --line:#cddada;
+  --accent:#0b7a7e; --accent-ink:#ffffff; --amber:#9a5f08; --amber-bg:#fbefd5; --amber-line:#e8cf99;
+  --field:#05080b; --good:#1c7c4a; --warn:#b4531a;
+  --display:'Bricolage Grotesque',system-ui,sans-serif;
+  --body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c1417; --surface:#131f24; --ink:#e4eff0; --muted:#8ba2a8; --line:#243940;
+    --accent:#43c0c4; --accent-ink:#04191a; --amber:#e8ad3f; --amber-bg:#2b2412; --amber-line:#5a4720;
+    --field:#020405; --good:#5bd08f; --warn:#f0925c; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0c1417; --surface:#131f24; --ink:#e4eff0; --muted:#8ba2a8; --line:#243940;
+  --accent:#43c0c4; --accent-ink:#04191a; --amber:#e8ad3f; --amber-bg:#2b2412; --amber-line:#5a4720;
+  --field:#020405; --good:#5bd08f; --warn:#f0925c; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-block:22px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{max-width:1180px;margin:0 auto}
+.top{display:flex;flex-wrap:wrap;gap:8px 32px;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+.kicker{margin:0 0 4px;font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0;font:700 clamp(26px,4.6vw,40px)/1.05 var(--display);letter-spacing:-.01em;text-wrap:balance}
+.lede{margin:0;max-width:44ch;color:var(--muted)}
+.lab{display:grid;grid-template-columns:minmax(0,620px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:880px){.lab{grid-template-columns:minmax(0,1fr)}}
+.left,.right{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+h2{margin:0 0 10px;font:700 19px/1.2 var(--display);text-wrap:balance}
+h3{margin:16px 0 6px;font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+.stage{position:relative;width:100%;aspect-ratio:1;background:var(--field);border-radius:20px;overflow:hidden;touch-action:none;outline-offset:3px}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#ov{cursor:grab}
+.stage.measuring #ov{cursor:crosshair}
+.stage.dragging #ov{cursor:grabbing}
+.stage .alert{position:absolute;left:12px;right:12px;top:12px;z-index:2;background:var(--amber-bg);color:var(--ink);border:1px solid var(--amber-line);border-radius:10px;padding:8px 12px;font-size:13.5px;pointer-events:none}
+.readout{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+@media (max-width:520px){.readout{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.readout div{background:var(--surface);padding:9px 12px}
+.readout small{display:block;font:500 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.readout b{font:500 16px var(--mono);font-variant-numeric:tabular-nums}
+#rFocus.ok{color:var(--good)} #rFocus.bad{color:var(--warn)}
+
+.turret{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.obj{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px 6px;cursor:pointer;font-family:var(--body);text-align:center}
+.obj b{display:block;font:700 22px/1 var(--display)}
+.obj span{display:block;margin-top:3px;font-size:12px;color:var(--muted)}
+.obj[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.obj[aria-pressed="true"] span{color:inherit;opacity:.85}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.stage:focus-visible{outline:3px solid var(--accent)}
+
+.sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 22px}
+@media (max-width:520px){.sliders{grid-template-columns:minmax(0,1fr)}}
+.sliders label{display:flex;justify-content:space-between;font-weight:600;font-size:13px}
+.sliders label span{font:400 12px var(--mono);color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--accent);margin:6px 0 0}
+.stagebar{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+.dpad{display:grid;grid-template-columns:repeat(3,38px);grid-template-rows:repeat(3,38px);gap:4px}
+.dpad button{grid-area:auto}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 12px;font:500 14px var(--body);cursor:pointer;min-height:38px}
+.btn:hover{border-color:var(--accent)}
+.btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.tiny{margin:10px 0 0;font-size:12.5px;color:var(--muted)}
+
+.group{margin:0 0 12px}
+.group:last-child{margin:0}
+.group h3{margin:0 0 6px}
+.slides{display:flex;flex-wrap:wrap;gap:8px}
+.slide{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 12px;font:500 14px var(--body);cursor:pointer;text-align:left}
+.slide:hover{border-color:var(--accent)}
+.slide[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tag{margin:0 0 4px;font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.sci{margin:-4px 0 10px;font-style:italic;color:var(--muted)}
+.hint{background:var(--amber-bg);border:1px solid var(--amber-line);color:var(--ink);border-radius:10px;padding:10px 12px;margin:12px 0 0}
+.hint b{color:var(--amber)}
+.words{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}
+.words li{border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:13px}
+.tasks{margin:0;padding-left:20px;display:grid;gap:8px}
+.tasks b{font-weight:600;color:var(--accent)}
+.formula{margin:12px 0 0;padding:10px 12px;border-left:3px solid var(--accent);background:var(--bg);font:400 13px/1.5 var(--mono)}
+textarea{width:100%;min-height:150px;resize:vertical;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:10px 12px;font:400 14px/1.5 var(--body)}
+.notebar{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
+.status{min-height:1.4em;margin:8px 0 0;font-size:13px;color:var(--good)}
+</style>
+</head>
+<body>
+
+
+<div class="app">
+  <header class="top">
+    <div>
+      <p class="kicker">Grade 9 Biology · Discover cells · Microscope practical</p>
+      <h1>Virtual Microscope Lab</h1>
+    </div>
+    <p class="lede">Find your specimen on the lowest power, focus it, then work up. Record each view on your observation sheet.</p>
+  </header>
+
+  <main class="lab">
+    <section class="left" aria-label="Microscope">
+      <div class="stage" id="stage" tabindex="0" role="application" aria-label="Microscope view. Drag or use the arrow keys to move the slide.">
+        <canvas id="view"></canvas>
+        <canvas id="ov"></canvas>
+        <div class="alert" id="alert" role="status" hidden></div>
+      </div>
+
+      <div class="readout" aria-live="polite">
+        <div><small>Eyepiece × objective</small><b id="rEq">10× × 4×</b></div>
+        <div><small>Total magnification</small><b id="rMag">40×</b></div>
+        <div><small>Field of view</small><b id="rFov">2.25 mm</b></div>
+        <div><small>Image</small><b id="rFocus">Blurry</b></div>
+      </div>
+
+      <div class="turret" id="turret" role="group" aria-label="Objective lens"></div>
+
+      <div class="card">
+        <div class="sliders">
+          <div><label for="coarse">Coarse focus <span id="vCoarse"></span></label><input id="coarse" type="range" min="0" max="100" step="1" value="15"></div>
+          <div><label for="fine">Fine focus <span id="vFine"></span></label><input id="fine" type="range" min="0" max="100" step="1" value="50"></div>
+          <div><label for="light">Light <span id="vLight"></span></label><input id="light" type="range" min="0" max="100" step="1" value="70"></div>
+          <div><label for="dia">Diaphragm <span id="vDia"></span></label><input id="dia" type="range" min="0" max="100" step="1" value="60"></div>
+        </div>
+        <div class="stagebar">
+          <div class="dpad" aria-label="Move the slide">
+            <span></span><button class="btn" data-move="up" aria-label="Move slide up">↑</button><span></span>
+            <button class="btn" data-move="left" aria-label="Move slide left">←</button><button class="btn" data-move="home" aria-label="Centre the slide">●</button><button class="btn" data-move="right" aria-label="Move slide right">→</button>
+            <span></span><button class="btn" data-move="down" aria-label="Move slide down">↓</button><span></span>
+          </div>
+          <div class="btnrow">
+            <button class="btn" id="measure" aria-pressed="false">Measure</button>
+            <button class="btn" id="clearM">Clear line</button>
+            <button class="btn" id="pause" aria-pressed="false">Pause motion</button>
+          </div>
+        </div>
+        <p class="tiny">Always start on 4×. Use coarse then fine focus on 4× and 10×. On 40× and 100× use only the fine focus. Closing the diaphragm adds contrast to pale specimens.</p>
+      </div>
+    </section>
+
+    <section class="right" aria-label="Slides and notes">
+      <div class="card">
+        <h2>Slide library</h2>
+        <div id="slides"></div>
+      </div>
+      <div class="card" id="info"></div>
+      <div class="card">
+        <h2>Notes</h2>
+        <textarea id="notes" aria-label="Notes" placeholder="Click “Add this view” to log the slide and magnification, then add what you can see. Your drawings go on your paper observation sheet."></textarea>
+        <div class="notebar">
+          <button class="btn" id="addView">Add this view</button>
+          <button class="btn" id="copyNotes">Copy notes</button>
+          <button class="btn" id="clearNotes">Clear notes</button>
+        </div>
+        <p class="status" id="status" role="status"></p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(()=>{
+'use strict';
+const TAU=Math.PI*2;
+const $=(s,r=document)=>r.querySelector(s);
+
+/* ---------- seeded random helpers ---------- */
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function hash(x,y,s){let h=Math.imul(x|0,374761393)^Math.imul(y|0,668265263)^Math.imul((s|0)+1,1274126177);h=Math.imul(h^(h>>>13),1103515245);return(h^(h>>>16))>>>0}
+const rngAt=(x,y,s=0)=>mulberry(hash(x,y,s));
+
+/* ---------- optics ---------- */
+const OBJ=[{m:4,name:'Scanning'},{m:10,name:'Low power'},{m:40,name:'High power'},{m:100,name:'Oil immersion'}];
+const FOVK=9000;                       /* field of view (µm) = 9000 ÷ objective power */
+const OFFSET=[0,2.5,-3.2,4.8];         /* small focus shift between lenses */
+const BLURK=[0.5,0.9,1.8,3.2];         /* depth of field gets shallower at high power */
+
+/* ---------- drawing helpers ---------- */
+const mw=(V,a,px=1.2)=>Math.max(a,px/V.s);
+function world(ctx,V,fn){ctx.save();ctx.translate(V.Wc/2,V.Wc/2);ctx.scale(V.s,V.s);ctx.translate(-V.cx,-V.cy);fn();ctx.restore()}
+function eachCell(V,size,pad,cb){
+  const hw=V.Wc/2/V.s;
+  const x0=Math.floor((V.cx-hw)/size)-pad,x1=Math.floor((V.cx+hw)/size)+pad;
+  const y0=Math.floor((V.cy-hw)/size)-pad,y1=Math.floor((V.cy+hw)/size)+pad;
+  for(let i=x0;i<=x1;i++)for(let j=y0;j<=y1;j++)cb(i,j);
+}
+const across=(V,size)=>V.Wc/V.s/size;
+const noiseCache={};
+function haze(ctx,V,color){
+  if(!noiseCache[color]){
+    const c=document.createElement('canvas');c.width=c.height=160;const x=c.getContext('2d');const r=mulberry(9);
+    for(let i=0;i<900;i++){x.fillStyle=color;x.globalAlpha=.1+r()*.35;x.beginPath();x.arc(r()*160,r()*160,.6+r()*1.4,0,TAU);x.fill()}
+    noiseCache[color]=c;
+  }
+  ctx.save();ctx.fillStyle=ctx.createPattern(noiseCache[color],'repeat');
+  ctx.translate(-(V.cx*V.s)%160,-(V.cy*V.s)%160);ctx.fillRect(-160,-160,V.Wc+320,V.Wc+320);ctx.restore();
+}
+function blob(ctx,pts){ /* smooth closed curve through points */
+  const n=pts.length;ctx.beginPath();
+  ctx.moveTo((pts[n-1][0]+pts[0][0])/2,(pts[n-1][1]+pts[0][1])/2);
+  for(let i=0;i<n;i++){const p=pts[i],q=pts[(i+1)%n];ctx.quadraticCurveTo(p[0],p[1],(p[0]+q[0])/2,(p[1]+q[1])/2)}
+  ctx.closePath();
+}
+
+/* ---------- specimens ---------- */
+/* Bacteria */
+function coccus(ctx,V,x,y,r){ctx.beginPath();ctx.arc(x,y,Math.max(r,.8/V.s),0,TAU);ctx.fillStyle='#5b2c8a';ctx.fill()}
+function rod(ctx,V,x,y,a,L){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(a)*L,y+Math.sin(a)*L);ctx.lineCap='round';ctx.strokeStyle='#c4457c';ctx.lineWidth=mw(V,1.15,1.6);ctx.stroke()}
+function spiral(ctx,V,x,y,a,L){
+  ctx.beginPath();
+  for(let u=0;u<=L;u+=.4){const px=x+Math.cos(a)*u-Math.sin(a)*Math.sin(u*2.2)*.9,py=y+Math.sin(a)*u+Math.cos(a)*Math.sin(u*2.2)*.9;u?ctx.lineTo(px,py):ctx.moveTo(px,py)}
+  ctx.lineCap='round';ctx.strokeStyle='#b83a78';ctx.lineWidth=mw(V,.8,1.4);ctx.stroke();
+}
+function drawBacteria(ctx,V){
+  if(across(V,30)>50){haze(ctx,V,'#7a3b8f');return}
+  world(ctx,V,()=>{
+    eachCell(V,30,1,(i,j)=>{
+      const r=rngAt(i,j,11),ox=i*30,oy=j*30,k=r();
+      if(k<.25)return;
+      if(k<.45){const cx=ox+5+r()*20,cy=oy+5+r()*20,n=8+(r()*10|0);
+        for(let q=0;q<n;q++){const a=r()*TAU,d=Math.sqrt(r())*3.4;coccus(ctx,V,cx+Math.cos(a)*d,cy+Math.sin(a)*d,.62)}}
+      else if(k<.6){let x=ox+4+r()*8,y=oy+4+r()*22,a=r()*TAU;const n=7+(r()*8|0);
+        for(let q=0;q<n;q++){coccus(ctx,V,x,y,.62);a+=(r()-.5)*.5;x+=Math.cos(a)*1.25;y+=Math.sin(a)*1.25}}
+      else if(k<.85){const n=3+(r()*4|0);for(let q=0;q<n;q++)rod(ctx,V,ox+3+r()*24,oy+3+r()*24,r()*TAU,3.2+r()*1.5)}
+      else{for(let q=0;q<2;q++)spiral(ctx,V,ox+3+r()*18,oy+3+r()*22,r()*TAU,8)}
+    });
+  });
+}
+
+/* Pond water protists */
+function paramecium(ctx,V,t,ph){
+  const L=160,Wd=26;
+  ctx.beginPath();
+  for(let a=0;a<=TAU+.01;a+=TAU/40){const x=Math.cos(a)*L/2,y=Math.sin(a)*Wd*(1+.3*Math.cos(a));a?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+  ctx.closePath();ctx.fillStyle='rgba(205,222,230,.55)';ctx.fill();
+  ctx.strokeStyle='rgba(55,95,110,.9)';ctx.lineWidth=mw(V,1.8);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(L*.35,-Wd*.2);ctx.quadraticCurveTo(0,Wd*.1,-L*.05,Wd*.05);ctx.strokeStyle='rgba(60,90,100,.5)';ctx.lineWidth=mw(V,3);ctx.stroke();
+  ctx.beginPath();ctx.ellipse(-5,0,17,8,0,0,TAU);ctx.fillStyle='rgba(110,90,150,.5)';ctx.fill();
+  ctx.beginPath();ctx.arc(-5,6,3,0,TAU);ctx.fillStyle='rgba(90,70,130,.7)';ctx.fill();
+  for(const sg of [1,-1]){
+    const rr=5+3*(.5+.5*Math.sin(t*.9+(sg>0?0:2)));
+    ctx.beginPath();ctx.arc(sg*L*.3,0,rr,0,TAU);ctx.fillStyle='rgba(255,255,255,.75)';ctx.fill();ctx.strokeStyle='rgba(60,95,110,.6)';ctx.lineWidth=mw(V,.9,1);ctx.stroke();
+    ctx.beginPath();for(let q=0;q<6;q++){const a=q*TAU/6;ctx.moveTo(sg*L*.3+Math.cos(a)*rr,Math.sin(a)*rr);ctx.lineTo(sg*L*.3+Math.cos(a)*(rr+7),Math.sin(a)*(rr+7))}
+    ctx.strokeStyle='rgba(60,95,110,.4)';ctx.stroke();
+  }
+  ctx.fillStyle='rgba(160,170,90,.6)';
+  for(let q=0;q<6;q++){ctx.beginPath();ctx.arc(Math.cos(ph*7+q*2.1)*L*.28,Math.sin(ph*5+q*1.7)*Wd*.45,4.5,0,TAU);ctx.fill()}
+  if(V.s>.9){
+    ctx.beginPath();
+    for(let a=0;a<TAU;a+=TAU/70){
+      const ex=Math.cos(a)*L/2,ey=Math.sin(a)*Wd*(1+.3*Math.cos(a)),w=Math.sin(t*14-a*6)*.4;
+      const nx=Math.cos(a)*.35,ny=Math.sin(a),nl=Math.hypot(nx,ny),ux=nx/nl,uy=ny/nl;
+      const dx=ux*Math.cos(w)-uy*Math.sin(w),dy=ux*Math.sin(w)+uy*Math.cos(w);
+      ctx.moveTo(ex,ey);ctx.lineTo(ex+dx*7,ey+dy*7);
+    }
+    ctx.strokeStyle='rgba(55,95,110,.45)';ctx.lineWidth=.8;ctx.stroke();
+  }
+}
+function euglena(ctx,V,t,ph){
+  const sy=1+.14*Math.sin(.9*t+ph);
+  ctx.beginPath();
+  for(let a=0;a<=TAU+.01;a+=TAU/32){const x=Math.cos(a)*27.5,y=Math.sin(a)*9*sy*(1-.3*Math.cos(a));a?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+  ctx.closePath();ctx.fillStyle='rgba(120,195,100,.6)';ctx.fill();ctx.strokeStyle='rgba(35,110,55,.95)';ctx.lineWidth=mw(V,1.3);ctx.stroke();
+  ctx.fillStyle='rgba(30,120,50,.8)';
+  for(let q=0;q<9;q++){ctx.beginPath();ctx.ellipse(-16+q*3.6,Math.sin(q*2.3+ph)*4.5*sy,3.4,1.6,q,0,TAU);ctx.fill()}
+  ctx.beginPath();ctx.arc(-3,0,5,0,TAU);ctx.fillStyle='rgba(70,60,120,.55)';ctx.fill();
+  ctx.beginPath();ctx.arc(20,-3,1.8,0,TAU);ctx.fillStyle='#c8321e';ctx.fill();
+  ctx.beginPath();ctx.arc(18,3,2.6,0,TAU);ctx.fillStyle='rgba(255,255,255,.75)';ctx.fill();
+  ctx.beginPath();ctx.moveTo(27,0);
+  for(let u=0;u<=45;u+=3)ctx.lineTo(27+u,Math.sin(u*.28-t*18)*(2+u*.05));
+  ctx.strokeStyle='rgba(40,110,60,.85)';ctx.lineWidth=mw(V,.9,1);ctx.stroke();
+}
+function amoeba(ctx,V,t,ph){
+  const R=95,N=36,pts=[];
+  for(let i=0;i<N;i++){
+    const a=i/N*TAU,rr=R*(1+.16*Math.sin(3*a+.35*t+ph)+.12*Math.sin(5*a-.28*t+ph*2)+.3*Math.pow(Math.max(0,Math.sin(2*a+.18*t+ph*3)),3));
+    pts.push([Math.cos(a)*rr,Math.sin(a)*rr]);
+  }
+  blob(ctx,pts);ctx.fillStyle='rgba(196,210,205,.42)';ctx.fill();ctx.strokeStyle='rgba(70,105,100,.85)';ctx.lineWidth=mw(V,2);ctx.stroke();
+  const g=mulberry(Math.floor(ph*1000));ctx.fillStyle='rgba(110,130,120,.45)';
+  for(let q=0;q<40;q++){const a=g()*TAU,d=Math.sqrt(g())*R*.7;ctx.beginPath();ctx.arc(Math.cos(a)*d,Math.sin(a)*d,1.2+g()*1.6,0,TAU);ctx.fill()}
+  ctx.beginPath();ctx.arc(-10,8,16,0,TAU);ctx.fillStyle='rgba(95,80,125,.5)';ctx.fill();ctx.strokeStyle='rgba(70,60,110,.7)';ctx.lineWidth=mw(V,1,1);ctx.stroke();
+  ctx.beginPath();ctx.arc(-10,8,5,0,TAU);ctx.fillStyle='rgba(60,45,95,.7)';ctx.fill();
+  ctx.beginPath();ctx.arc(42,-26,9+3*Math.sin(t*.8+ph),0,TAU);ctx.fillStyle='rgba(255,255,255,.7)';ctx.fill();ctx.strokeStyle='rgba(60,95,110,.6)';ctx.stroke();
+  ctx.beginPath();ctx.arc(-38,-30,12,0,TAU);ctx.fillStyle='rgba(210,225,200,.65)';ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.arc(-38,-30,4.5,0,TAU);ctx.fillStyle='rgba(60,150,70,.85)';ctx.fill();
+}
+function drawPond(ctx,V,t){
+  world(ctx,V,()=>{
+    eachCell(V,500,1,(i,j)=>{
+      const r=rngAt(i,j,21);
+      for(let q=0;q<10;q++){const x=(i+r())*500,y=(j+r())*500,d=2+r()*7;ctx.fillStyle='rgba(120,120,90,'+(.15+r()*.25).toFixed(2)+')';ctx.beginPath();ctx.arc(x,y,d,0,TAU);ctx.fill()}
+      for(let q=0;q<4;q++){const x=(i+r())*500,y=(j+r())*500,d=6+r()*3;ctx.fillStyle='rgba(90,170,80,.65)';ctx.beginPath();ctx.arc(x,y,d,0,TAU);ctx.fill();ctx.strokeStyle='rgba(40,110,50,.8)';ctx.lineWidth=mw(V,1,1);ctx.stroke()}
+      const n=1+(r()<.7?1:0)+(r()<.25?1:0);
+      for(let q=0;q<n;q++){
+        const kind=r(),bx=(i+r())*500,by=(j+r())*500,m=kind>=.75?.25:1;
+        const ax=(60+r()*110)*m,ay=(40+r()*100)*m,wx=.5+r()*.5,wy=.4+r()*.5,px=r()*TAU,py=r()*TAU,ph=r()*TAU;
+        const x=bx+ax*Math.sin(wx*t+px),y=by+ay*Math.sin(wy*t+py);
+        const h=Math.atan2(ay*wy*Math.cos(wy*t+py),ax*wx*Math.cos(wx*t+px));
+        ctx.save();ctx.translate(x,y);
+        if(kind<.4){ctx.rotate(h);paramecium(ctx,V,t,ph)}
+        else if(kind<.75){ctx.rotate(h);euglena(ctx,V,t,ph)}
+        else{ctx.rotate(ph*.2);amoeba(ctx,V,t,ph)}
+        ctx.restore();
+      }
+    });
+  });
+}
+
+/* Onion epidermis */
+const onX=(i,j)=>i*250+((j&1)?125:0)+(rngAt(i,j,31)()-.5)*36;
+const onY=j=>j*92+(rngAt(0,j,32)()-.5)*10;
+function drawOnion(ctx,V){
+  const hw=V.Wc/2/V.s,j0=Math.floor((V.cy-hw)/92)-1,j1=Math.floor((V.cy+hw)/92)+1;
+  world(ctx,V,()=>{
+    for(let j=j0;j<=j1;j++){
+      const t=onY(j),b=onY(j+1),i0=Math.floor((V.cx-hw)/250)-1,i1=Math.floor((V.cx+hw)/250)+1;
+      for(let i=i0;i<=i1;i++){
+        const l=onX(i,j),rt=onX(i+1,j),c=9,mid=(t+b)/2;
+        ctx.beginPath();ctx.moveTo(l+c,t);ctx.lineTo(rt-c,t);ctx.lineTo(rt,t+c);ctx.lineTo(rt,b-c);ctx.lineTo(rt-c,b);ctx.lineTo(l+c,b);ctx.lineTo(l,b-c);ctx.lineTo(l,t+c);ctx.closePath();
+        ctx.fillStyle='rgba(236,200,120,.5)';ctx.fill();ctx.strokeStyle='rgba(150,100,40,.9)';ctx.lineWidth=mw(V,2.6,1.2);ctx.lineJoin='round';ctx.stroke();
+        ctx.beginPath();ctx.ellipse((l+rt)/2,mid,(rt-l)/2-16,(b-t)/2-10,0,0,TAU);ctx.fillStyle='rgba(255,243,208,.55)';ctx.fill();
+        const r=rngAt(i,j,33),nx=l+28+r()*((rt-l)*.5),ny=mid+(r()-.5)*22;
+        ctx.strokeStyle='rgba(170,120,50,.45)';ctx.lineWidth=mw(V,.9,1);
+        ctx.beginPath();ctx.moveTo(nx,ny);ctx.lineTo(l+3,mid+(r()-.5)*30);ctx.moveTo(nx,ny);ctx.lineTo(nx+(r()-.5)*40,t+3);ctx.moveTo(nx,ny);ctx.lineTo(nx+(r()-.5)*40,b-3);ctx.stroke();
+        ctx.beginPath();ctx.ellipse(nx,ny,12,9,r()*.6,0,TAU);ctx.fillStyle='rgba(150,90,30,.78)';ctx.fill();ctx.strokeStyle='rgba(95,55,15,.9)';ctx.lineWidth=mw(V,1.2,1);ctx.stroke();
+        ctx.beginPath();ctx.arc(nx+1,ny,3.2,0,TAU);ctx.fillStyle='rgba(80,42,10,.85)';ctx.fill();
+      }
+    }
+  });
+}
+
+/* Cork (Hooke) */
+function drawCork(ctx,V){
+  if(across(V,34)>90){haze(ctx,V,'#7a5028');return}
+  const hw=V.Wc/2/V.s,j0=Math.floor((V.cy-hw)/22)-1,j1=Math.floor((V.cy+hw)/22)+1;
+  const i0=Math.floor((V.cx-hw)/34)-1,i1=Math.floor((V.cx+hw)/34)+1;
+  world(ctx,V,()=>{
+    for(let j=j0;j<=j1;j++){
+      const t=j*22+(rngAt(0,j,61)()-.5)*3,b=(j+1)*22+(rngAt(0,j+1,61)()-.5)*3;
+      const xb=i=>i*34+((j&1)?17:0)+(rngAt(i,j,62)()-.5)*7;
+      for(let i=i0;i<=i1;i++){
+        const l=xb(i),r=xb(i+1);
+        ctx.beginPath();ctx.rect(l,t,r-l,b-t);
+        ctx.fillStyle='rgba(247,236,214,.9)';ctx.fill();ctx.strokeStyle='rgba(124,80,38,.95)';ctx.lineWidth=mw(V,1.7,1);ctx.stroke();
+        const g=rngAt(i,j,63);
+        if(g()<.12){ctx.fillStyle='rgba(150,100,50,.35)';ctx.beginPath();ctx.arc(l+(r-l)*g(),t+(b-t)*g(),1.6,0,TAU);ctx.fill()}
+      }
+    }
+  });
+}
+
+/* Human cheek cells */
+function drawCheek(ctx,V){
+  world(ctx,V,()=>{
+    eachCell(V,110,1,(i,j)=>{
+      const r=rngAt(i,j,71);if(r()<.2)return;
+      const x=(i+.2+r()*.6)*110,y=(j+.2+r()*.6)*110,R=26+r()*10,rot=r()*TAU,pts=[];
+      for(let k=0;k<10;k++){const a=k/10*TAU;pts.push([x+Math.cos(a+rot)*R*(.85+r()*.3),y+Math.sin(a+rot)*R*(.85+r()*.3)])}
+      blob(ctx,pts);ctx.fillStyle='rgba(176,205,232,.55)';ctx.fill();ctx.strokeStyle='rgba(60,100,170,.85)';ctx.lineWidth=mw(V,1.4,1);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x-R*.6,y+R*.4);ctx.quadraticCurveTo(x,y+(r()-.5)*R*.5,x+R*.5,y+R*.5);ctx.strokeStyle='rgba(60,100,170,.3)';ctx.lineWidth=mw(V,.9,.8);ctx.stroke();
+      ctx.beginPath();ctx.arc(x+(r()-.5)*8,y+(r()-.5)*8,5+r()*1.5,0,TAU);ctx.fillStyle='rgba(40,60,150,.78)';ctx.fill();
+      ctx.fillStyle='rgba(70,100,170,.4)';
+      for(let q=0;q<14;q++){const a=r()*TAU,d=Math.sqrt(r())*R*.8;ctx.beginPath();ctx.arc(x+Math.cos(a)*d,y+Math.sin(a)*d,.9,0,TAU);ctx.fill()}
+    });
+  });
+}
+
+/* Elodea leaf with moving chloroplasts */
+function drawElodea(ctx,V,t){
+  const hw=V.Wc/2/V.s,j0=Math.floor((V.cy-hw)/30)-1,j1=Math.floor((V.cy+hw)/30)+1,i0=Math.floor((V.cx-hw)/75)-2,i1=Math.floor((V.cx+hw)/75)+1,detail=V.s>.5;
+  world(ctx,V,()=>{
+    for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++){
+      const g=rngAt(i,j,81),l=i*75+((j&1)?20:0),tp=j*30,w=75,h=30,cx=l+w/2,cy=tp+h/2;
+      ctx.beginPath();ctx.rect(l+.8,tp+.8,w-1.6,h-1.6);ctx.fillStyle=detail?'rgba(200,228,180,.5)':'rgba(120,180,90,.75)';ctx.fill();
+      ctx.strokeStyle='rgba(70,110,60,.9)';ctx.lineWidth=mw(V,1.6,1);ctx.stroke();
+      if(detail){
+        ctx.fillStyle='rgba(48,140,52,.9)';const ph=g()*TAU,dir=g()<.5?1:-1;
+        for(let k=0;k<14;k++){const a=k*TAU/14+t*.12*dir+ph;ctx.beginPath();ctx.ellipse(cx+Math.cos(a)*(w/2-6),cy+Math.sin(a)*(h/2-5),3.2,2.2,a,0,TAU);ctx.fill()}
+      }
+    }
+  });
+}
+
+/* ---------- slide catalogue ---------- */
+const SLIDES=[
+ {id:'S1',name:'Cork',sci:'Thin slice of cork bark',group:'Plant cells',stain:'No stain',bg:'#efe3c8',bound:1500,ideal:48,animated:false,draw:drawCork,
+  desc:'A very thin slice of cork. In 1665 Robert Hooke looked at cork like this and called the little boxes “cells”.',
+  hint:'Start on 4×. Centre the slice, then go up one lens at a time. Cork cells are dead, so look at the walls and the empty spaces.',
+  words:['cell wall','empty','pattern','rows','magnification']},
+ {id:'S2',name:'Onion epidermis',sci:'Thin layer of onion bulb cells',group:'Plant cells',stain:'Iodine',bg:'#f6edd7',bound:2000,ideal:50,animated:false,draw:drawOnion,
+  desc:'A thin layer of cells from an onion bulb. Iodine stain makes the nucleus easier to see.',
+  hint:'Start on 10×. On 40× one cell fills much of the view. Look for a dark spot inside each cell.',
+  words:['cell wall','cytoplasm','nucleus','vacuole','stain']},
+ {id:'S3',name:'Elodea leaf',sci:'Leaf of a water plant',group:'Plant cells',stain:'Live, no stain',bg:'#eaf2e2',bound:1500,ideal:56,animated:true,draw:drawElodea,
+  desc:'A whole leaf from the water plant Elodea. It is only two cells thick. The green discs are chloroplasts, and they drift slowly around the cell.',
+  hint:'Use 10×, then 40×. Look for green discs moving around the edge of a cell.',
+  words:['chloroplast','cell wall','vacuole','cytoplasm','moving']},
+ {id:'A1',name:'Cheek cells',sci:'Human cheek (epithelial) cells',group:'Animal cells',stain:'Methylene blue',bg:'#f1f4f8',bound:1200,ideal:42,animated:false,draw:drawCheek,
+  desc:'Cells gently scraped from the inside of a cheek and stained blue. The cells are flat and are often spaced out on the slide.',
+  hint:'The cells are small and spread out. Scan on 4×, centre one, then go up to 40×.',
+  words:['nucleus','cytoplasm','flat','irregular','stain']},
+ {id:'P1',name:'Pond water',sci:'Paramecium, Euglena and Amoeba',group:'Protists',stain:'Live wet mount',bg:'#e9f0ee',bound:2500,ideal:38,animated:true,draw:drawPond,
+  desc:'A drop of pond water. These single-celled organisms are alive and moving. Each one moves in a different way.',
+  hint:'Start on 4× and look for movement. Move up to 10× or 40× and shift the slide to follow one. “Pause motion” helps you draw.',
+  words:['single-celled','cilia','flagellum','moves','chloroplast']},
+ {id:'B1',name:'Bacteria smear',sci:'Mixed bacteria',group:'Bacteria',stain:'Gram stain',bg:'#f1e6ee',bound:600,ideal:46,animated:false,draw:drawBacteria,
+  desc:'A dried smear of bacteria. Bacteria are much smaller than the cells in the other slides.',
+  hint:'Find the smear on 10×, then go to 100× and use only the fine focus. Look for round, rod and spiral shapes.',
+  words:['round','rod','spiral','chains','clusters']}
+];
+
+/* ---------- state ---------- */
+const st={slide:0,obj:0,cx:0,cy:0,coarse:15,fine:50,light:70,dia:60,measure:false,pts:[],paused:false};
+let dirty=true,simT=0,lastTs=0,dpr=1,Wc=600,cssW=600,dragging=false,lx=0,ly=0,moved=false;
+const view=$('#view'),ov=$('#ov'),stage=$('#stage'),vctx=view.getContext('2d'),octx=ov.getContext('2d');
+const SL=()=>SLIDES[st.slide];
+const fov=()=>FOVK/OBJ[st.obj].m;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+try{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)st.paused=true}catch(e){}
+
+/* ---------- optics model ---------- */
+function focusErr(){
+  const f=st.coarse+(st.fine-50)*.12;
+  return Math.abs(f-(SL().ideal+OFFSET[st.obj]));
+}
+function blurPx(){return Math.min(14,Math.max(0,focusErr()-.2)*BLURK[st.obj])}
+function applyFilter(){
+  const br=(.25+st.light/100*1.1)*(.72+.28*st.dia/100),ct=1.55-.9*st.dia/100;
+  view.style.filter='blur('+blurPx().toFixed(2)+'px) brightness('+br.toFixed(2)+') contrast('+ct.toFixed(2)+')';
+}
+function fmtLen(um){return um>=1000?(um/1000).toFixed(um>=10000?0:2).replace(/\.?0+$/,'')+' mm':(um>=10?um.toFixed(0):um.toFixed(1))+' µm'}
+
+/* ---------- safety alert ---------- */
+const alertEl=$('#alert');let alertTimer=0,crashed=false;
+function flash(msg,ms){alertEl.textContent=msg;alertEl.hidden=false;clearTimeout(alertTimer);if(ms)alertTimer=setTimeout(()=>{if(!crashed)alertEl.hidden=true},ms)}
+function checkCrash(){
+  const f=st.coarse+(st.fine-50)*.12,hit=st.obj>=2&&f>SL().ideal+OFFSET[st.obj]+6;
+  if(hit&&!crashed){crashed=true;flash('The objective is touching the slide. Lower the stage with the coarse focus.',0)}
+  else if(!hit&&crashed){crashed=false;alertEl.hidden=true}
+}
+
+/* ---------- readouts ---------- */
+function updateReadout(){
+  const f=fov(),b=blurPx();
+  $('#rEq').textContent='10× × '+OBJ[st.obj].m+'×';
+  $('#rMag').textContent=OBJ[st.obj].m*10+'×';
+  $('#rFov').textContent=fmtLen(f);
+  const r=$('#rFocus');r.textContent=b<.6?'Sharp':b<3?'Almost':'Blurry';r.className=b<.6?'ok':'bad';
+  $('#vCoarse').textContent=st.coarse;$('#vFine').textContent=st.fine;$('#vLight').textContent=st.light;$('#vDia').textContent=st.dia;
+  applyFilter();checkCrash();
+}
+
+/* ---------- rendering ---------- */
+function geom(){const D=Wc*.94,f=fov();return{D,f,s:D/f}}
+function render(t){
+  const g=geom(),V={cx:st.cx,cy:st.cy,fov:g.f,s:g.s,Wc,t};
+  vctx.setTransform(1,0,0,1,0,0);vctx.fillStyle=SL().bg;vctx.fillRect(0,0,Wc,Wc);
+  SL().draw(vctx,V,t);
+}
+function niceBar(um){const steps=[1,2,5,10,20,50,100,200,500,1000,2000];let b=steps[0];for(const s of steps)if(Math.abs(s-um)<Math.abs(b-um))b=s;return b}
+function toScreen(p){const g=geom();return[Wc/2+(p[0]-st.cx)*g.s,Wc/2+(p[1]-st.cy)*g.s]}
+function drawOverlay(){
+  const g=geom(),c=octx;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,Wc,Wc);
+  c.save();c.fillStyle='#030507';c.beginPath();c.rect(0,0,Wc,Wc);c.arc(Wc/2,Wc/2,g.D/2,0,TAU);c.fill('evenodd');c.restore();
+  const rg=c.createRadialGradient(Wc/2,Wc/2,g.D*.34,Wc/2,Wc/2,g.D/2);rg.addColorStop(0,'rgba(0,0,0,0)');rg.addColorStop(1,'rgba(0,0,0,.38)');
+  c.fillStyle=rg;c.beginPath();c.arc(Wc/2,Wc/2,g.D/2,0,TAU);c.fill();
+  c.strokeStyle='rgba(255,255,255,.1)';c.lineWidth=2*dpr;c.beginPath();c.arc(Wc/2,Wc/2,g.D/2,0,TAU);c.stroke();
+  /* scale bar */
+  const bar=niceBar(g.f*.2),bw=bar*g.s,y=Wc/2+g.D/2*.84,x0=Wc/2-bw/2;
+  c.fillStyle='#fff';c.strokeStyle='rgba(0,0,0,.7)';c.lineWidth=1*dpr;c.fillRect(x0,y,bw,4*dpr);c.strokeRect(x0,y,bw,4*dpr);
+  c.font=(12*dpr)+'px "IBM Plex Mono",monospace';c.textAlign='center';c.fillStyle='#fff';c.shadowColor='rgba(0,0,0,.9)';c.shadowBlur=3*dpr;
+  c.fillText(fmtLen(bar),Wc/2,y-6*dpr);c.shadowBlur=0;
+  /* measurement */
+  if(st.pts.length){
+    c.strokeStyle='#e8ad3f';c.fillStyle='#e8ad3f';c.lineWidth=2*dpr;
+    const P=st.pts.map(toScreen);
+    P.forEach(p=>{c.beginPath();c.arc(p[0],p[1],4*dpr,0,TAU);c.fill()});
+    if(P.length===2){
+      c.beginPath();c.moveTo(P[0][0],P[0][1]);c.lineTo(P[1][0],P[1][1]);c.stroke();
+      const d=Math.hypot(st.pts[1][0]-st.pts[0][0],st.pts[1][1]-st.pts[0][1]);
+      c.font='600 '+(14*dpr)+'px "IBM Plex Mono",monospace';c.shadowColor='rgba(0,0,0,.95)';c.shadowBlur=4*dpr;
+      c.fillText(fmtLen(d),(P[0][0]+P[1][0])/2,(P[0][1]+P[1][1])/2-10*dpr);c.shadowBlur=0;
+    }
+  }
+}
+function loop(ts){
+  const dt=lastTs?(ts-lastTs)/1000:0;lastTs=ts;
+  if(!st.paused)simT+=Math.min(dt,.1);
+  if(dirty||(SL().animated&&!st.paused)){render(simT);drawOverlay();dirty=false}
+  requestAnimationFrame(loop);
+}
+
+/* ---------- layout ---------- */
+function resize(){
+  const r=stage.getBoundingClientRect();dpr=Math.min(2,window.devicePixelRatio||1);cssW=r.width||600;
+  Wc=Math.max(200,Math.round(cssW*dpr));view.width=ov.width=Wc;view.height=ov.height=Wc;dirty=true;
+}
+if(window.ResizeObserver)new ResizeObserver(resize).observe(stage);else window.addEventListener('resize',resize);
+
+/* ---------- interaction ---------- */
+function clampPos(){const b=SL().bound;st.cx=clamp(st.cx,-b,b);st.cy=clamp(st.cy,-b,b)}
+function pointerWorld(e){
+  const r=ov.getBoundingClientRect(),g=geom(),px=(e.clientX-r.left)/r.width*Wc,py=(e.clientY-r.top)/r.height*Wc;
+  return[st.cx+(px-Wc/2)/g.s,st.cy+(py-Wc/2)/g.s];
+}
+ov.addEventListener('pointerdown',e=>{
+  if(st.measure){
+    if(st.pts.length>=2)st.pts=[];
+    st.pts.push(pointerWorld(e));dirty=true;return;
+  }
+  dragging=true;lx=e.clientX;ly=e.clientY;ov.setPointerCapture(e.pointerId);stage.classList.add('dragging');
+});
+ov.addEventListener('pointermove',e=>{
+  if(!dragging)return;
+  const g=geom(),k=Wc/ov.getBoundingClientRect().width/g.s;
+  st.cx-=(e.clientX-lx)*k;st.cy-=(e.clientY-ly)*k;lx=e.clientX;ly=e.clientY;clampPos();dirty=true;
+});
+const endDrag=()=>{dragging=false;stage.classList.remove('dragging')};
+ov.addEventListener('pointerup',endDrag);ov.addEventListener('pointercancel',endDrag);
+function nudge(dir){
+  const step=fov()*.22;
+  if(dir==='up')st.cy-=step;else if(dir==='down')st.cy+=step;else if(dir==='left')st.cx-=step;else if(dir==='right')st.cx+=step;else{st.cx=0;st.cy=0}
+  clampPos();dirty=true;
+}
+document.querySelectorAll('[data-move]').forEach(b=>b.addEventListener('click',()=>nudge(b.dataset.move)));
+stage.addEventListener('keydown',e=>{
+  const m={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'}[e.key];
+  if(m){e.preventDefault();nudge(m)}
+});
+
+/* turret */
+const turret=$('#turret');
+OBJ.forEach((o,i)=>{
+  const b=document.createElement('button');b.className='obj';b.type='button';
+  b.innerHTML='<b>'+o.m+'×</b><span>'+o.name+'</span>';
+  b.addEventListener('click',()=>{st.obj=i;st.pts=[];syncUI();dirty=true});
+  turret.appendChild(b);
+});
+/* sliders */
+[['coarse','coarse'],['fine','fine'],['light','light'],['dia','dia']].forEach(([id,key])=>{
+  $('#'+id).addEventListener('input',e=>{st[key]=+e.target.value;updateReadout();if(key==='coarse'&&st.obj>=2&&!crashed)flash('Use only the fine focus on 40× and 100×.',3500);dirty=true});
+});
+$('#measure').addEventListener('click',()=>{st.measure=!st.measure;st.pts=[];syncUI();dirty=true});
+$('#clearM').addEventListener('click',()=>{st.pts=[];dirty=true});
+$('#pause').addEventListener('click',()=>{st.paused=!st.paused;syncUI()});
+
+/* slide library */
+function buildLibrary(){
+  const host=$('#slides'),groups={};
+  SLIDES.forEach((s,i)=>{(groups[s.group]=groups[s.group]||[]).push(i)});
+  Object.keys(groups).forEach(g=>{
+    const wrap=document.createElement('div');wrap.className='group';
+    wrap.innerHTML='<h3>'+g+'</h3><div class="slides"></div>';
+    groups[g].forEach(i=>{
+      const b=document.createElement('button');b.type='button';b.className='slide';b.dataset.i=i;b.textContent=SLIDES[i].id+' · '+SLIDES[i].name;
+      b.addEventListener('click',()=>loadSlide(i));wrap.lastChild.appendChild(b);
+    });
+    host.appendChild(wrap);
+  });
+}
+function loadSlide(i){
+  crashed=false;alertEl.hidden=true;st.slide=i;st.obj=0;st.cx=0;st.cy=0;st.pts=[];st.coarse=10+(i*7)%16;st.fine=50;
+  $('#coarse').value=st.coarse;$('#fine').value=st.fine;
+  renderInfo();syncUI();dirty=true;
+}
+function renderInfo(){
+  const s=SL();
+  $('#info').innerHTML='<p class="tag">Slide '+s.id+' · '+s.group+' · '+s.stain+'</p><h2>'+s.name+'</h2><p class="sci">'+s.sci+'</p><p>'+s.desc+'</p>'
+   +'<div class="hint"><b>Where to start.</b> '+s.hint+'</div>'
+   +'<h3>Useful words</h3><ul class="words">'+s.words.map(w=>'<li>'+w+'</li>').join('')+'</ul>';
+}
+function syncUI(){
+  turret.querySelectorAll('.obj').forEach((b,i)=>b.setAttribute('aria-pressed',i===st.obj));
+  document.querySelectorAll('.slide').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.i===st.slide));
+  $('#measure').setAttribute('aria-pressed',st.measure);$('#measure').textContent=st.measure?'Measuring: click two points':'Measure';
+  stage.classList.toggle('measuring',st.measure);
+  $('#pause').setAttribute('aria-pressed',st.paused);$('#pause').textContent=st.paused?'Resume motion':'Pause motion';
+  updateReadout();
+}
+
+/* notebook */
+const notes=$('#notes'),status=$('#status');
+try{notes.value=localStorage.getItem('ens-scope-notes')||''}catch(e){}
+const saveNotes=()=>{try{localStorage.setItem('ens-scope-notes',notes.value)}catch(e){}};
+notes.addEventListener('input',saveNotes);
+const say=m=>{status.textContent=m;setTimeout(()=>{if(status.textContent===m)status.textContent=''},3500)};
+$('#addView').addEventListener('click',()=>{
+  const s=SL(),line='• Slide '+s.id+' ('+s.name+') | Eyepiece 10× × Objective '+OBJ[st.obj].m+'× = '+OBJ[st.obj].m*10+'× total | field of view '+fmtLen(fov())+'\n  I can see: ';
+  notes.value+=(notes.value&&!notes.value.endsWith('\n')?'\n':'')+line;saveNotes();notes.focus();notes.setSelectionRange(notes.value.length,notes.value.length);
+  say('View added to your notebook.');
+});
+$('#copyNotes').addEventListener('click',()=>{
+  const fallback=()=>{notes.focus();notes.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}say(ok?'Notes copied.':'Press Ctrl+C (or Cmd+C) to copy the selected notes.')};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(notes.value).then(()=>say('Notes copied.'),fallback)}else fallback();
+});
+$('#clearNotes').addEventListener('click',()=>{
+  if(!notes.value)return;
+  if(status.dataset.confirm==='1'){notes.value='';saveNotes();status.dataset.confirm='';say('Notes cleared.');return}
+  status.dataset.confirm='1';say('Click “Clear notes” again to delete everything.');
+  setTimeout(()=>{status.dataset.confirm=''},3600);
+});
+
+/* ---------- start ---------- */
+buildLibrary();renderInfo();syncUI();resize();
+requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>
