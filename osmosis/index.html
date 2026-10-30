@@ -194,6 +194,11 @@ table.t th{background:var(--teal-l)}
 .rep .ans{white-space:pre-wrap;border-left:4px solid var(--teal-l);padding-left:10px;margin:2px 0 8px}
 .rep img{max-width:100%;border:1px solid var(--line);border-radius:6px}
 .repbar{max-width:900px;margin:0 auto 10px;display:flex;gap:8px;flex-wrap:wrap}
+.btn.fin{background:#0b7a43;font-size:18px;padding:12px 24px;box-shadow:0 3px 0 #075c31}
+.glowbtn{animation:glowb 1.4s ease-in-out 3}@keyframes glowb{50%{box-shadow:0 0 0 6px rgba(11,122,117,.35)}}
+/* touch screens (iPad): finger-sized targets */
+@media (orientation:portrait) and (min-width:700px) and (min-height:900px){#s3 .scope{min-height:calc(100vh - 190px)}}
+@media (pointer:coarse){.btn,.chip,.wstep,.item,select,input[type=text],#mtot,#nm,#sid{min-height:44px}.btn.sm{min-height:44px}.ab,.pad .ab{width:44px;height:44px}.pad{grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px)}.wheelrow svg.wheel{flex:none;width:62px;height:62px}input[type=checkbox]{width:26px;height:26px}.bottle,.shelf button{min-height:48px}}
 .resume{position:absolute;inset:0;background:rgba(18,38,58,.55);display:grid;place-items:center;z-index:20}
 .resume .card{max-width:420px;text-align:center}
 @media (max-width:1100px){
@@ -1053,7 +1058,7 @@ function reportText(){
 function showReport(){
  S.done=true;save();
  const body=reportHTML();track('done',{report:body});
- $('#report').innerHTML=`<div class="repbar"><button class="btn" data-act="print">Print or save as PDF</button><button class="btn ghost" data-act="dl">Download results page</button><button class="btn ghost" data-act="copy">Copy my text answers</button><button class="btn ghost" data-act="closerep">Back to the lab</button><span class="small" id="repmsg" style="align-self:center"></span></div><div class="rep" id="repbody">${body}</div>`;
+ $('#report').innerHTML=`<div class="repbar"><button class="btn fin" data-act="finish">Finish lab &#10003;</button><button class="btn ghost" data-act="print">Print or save as PDF</button><button class="btn ghost" data-act="dl">Download results page</button><button class="btn ghost" data-act="copy">Copy my text answers</button><button class="btn ghost" data-act="closerep">Back to the lab</button><span class="small" id="repmsg" style="align-self:center"></span></div><div class="rep" id="repbody">${body}</div>`;
  $('#report').hidden=false;$('#report').scrollTop=0}
 
 /* ================= RENDER ================= */
@@ -1080,6 +1085,7 @@ const ACT={
    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download='Osmosis_results_'+(S.name||'student').replace(/\W+/g,'_')+'.html';document.body.appendChild(a);a.click();a.remove();$('#repmsg').textContent='Downloaded. If nothing saved, use Print or save as PDF instead.'}catch(e){$('#repmsg').textContent='Could not download. Use Print or save as PDF.'}},
  copy(){const t=reportText();const ok=()=>$('#repmsg').textContent='Copied.';const no=()=>{$('#repmsg').textContent='Copy blocked. Select the text on the page instead.'};
    try{navigator.clipboard.writeText(t).then(ok,no)}catch(e){no()}},
+ finish(){S.finished=true;save();const m=$('#repmsg');m.innerHTML='<b>Lab finished.</b> Save or print your results, then close this page.';m.style.fontSize='16px';$$('.repbar [data-act=print],.repbar [data-act=dl]').forEach(b=>{b.classList.remove('glowbtn');void b.offsetWidth;b.classList.add('glowbtn')});$('#report').scrollTop=0},
  closerep(){$('#report').hidden=true},
  resume(){$('#resume').hidden=true;try{S=Object.assign(fresh(),JSON.parse(SAVED_RAW))}catch(e){S=fresh()}LOADED=true;SAVED_RAW=null;go(S.step);save()},
  fresh(){try{localStorage.removeItem(KEY)}catch(e){}S=fresh();LOADED=true;SAVED_RAW=null;$('#resume').hidden=true;go(0)}
