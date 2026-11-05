@@ -302,9 +302,9 @@ const BINDEF={
  glove:{t:'Glove bin',img:'glove_bin'},goggle:{t:'Wipe goggles and return them',img:'goggles'},hook:{t:'Coat hook',img:'coat_hook'}};
 const ITEMS=[
  {id:'acet',t:'Used acetone in the beaker',img:'beaker_setup',bin:'solvent'},{id:'strip',t:'Used paper strip',img:'fin',bin:'strips'},
- {id:'pick',t:'Pasteur pipette',img:'pipette',bin:'wash'},{id:'foil',t:'Foil square',img:'foil',bin:'general'},
- {id:'leaf',t:'Spinach pieces',img:'spinach',bin:'organic'},{id:'mort',t:'Mortar and pestle',img:'mx',bin:'wash'},
- {id:'beak',t:'Glass beaker (empty it first)',img:'beaker_empty',bin:'wash'},{id:'cyl',t:'Measuring cylinder',img:'cylinder',bin:'wash'},
+ {id:'pick',t:'Pasteur pipette',img:'pipette',bin:'general'},{id:'foil',t:'Foil square',img:'foil',bin:'general'},
+ {id:'leaf',t:'Spinach pieces',img:'spinach',bin:'organic'},{id:'mort',t:'Mortar and pestle (empty it first)',img:'mx',bin:'wash'},
+ {id:'beak',t:'Glass beaker (empty it first)',img:'beaker_empty',bin:'wash'},
  {id:'ipab',t:'Isopropyl alcohol bottle',img:'ipa',bin:'cabinet'},{id:'acb',t:'Acetone bottle',img:'acetone',bin:'cabinet'}];
 const PPEOUT=[{id:'glove',t:'Gloves',img:'ic_glove',bin:'glove'},{id:'gog',t:'Goggles',img:'ic_gog',bin:'goggle'},{id:'coat',t:'Lab coat',img:'ic_coat',bin:'hook'}];
 const KEY='chromoSimG10v3';
@@ -399,7 +399,7 @@ function reqs(){const R=[],A=S.A,B=S.B,C=S.C;
     R.push({l:'Complete Table 1',d:m.chk===1,a:'Choose each <b>color</b> and <b>pigment</b>. Press <b>Calculate</b> for Rf. Then press <b>Check my table</b>.'});
     R.push({l:'How many bands?',d:String(m.nb).trim()==='4',a:'Type how many <b>bands</b> you can see.'});break}
   case 5:{const left=ITEMS.filter(i=>!S.pk.done[i.id]).length,nx=PPEOUT[S.pk.out.length];
-    R.push({l:'Sort all 10 lab items',d:left===0,a:`Drag each item to the right place, or tap it and then tap the place. <b>${left} left</b>.`});
+    R.push({l:`Sort all ${ITEMS.length} lab items`,d:left===0,a:`Drag each item to the right place, or tap it and then tap the place. <b>${left} left</b>.`});
     R.push({l:'PPE off: gloves, goggles, lab coat',d:S.pk.out.length===3,a:`Take off your PPE in reverse order. Next: <b>${nx?nx.t:''}</b>.`});
     R.push({l:'Wash your hands (10 s)',d:!!S.pk.wash,a:'Press <b>Wash hands</b>. Wait 10 seconds.'});break}
   case 6:R.push({l:'Review and finish',d:!!S.finished,a:'Check your results. Then press <b>Finish lab</b>.'});break}
@@ -426,7 +426,7 @@ function safetyHTML(){const n=S.ppe.length,H=S.haz;
    <div class="field"><span class="lbl">Your class</span><div class="row" style="flex-wrap:nowrap"><select aria-label="Grade" data-in="gr" style="flex:1">${['9','10'].map(g=>`<option ${S.gr===g?'selected':''}>${g}</option>`).join('')}</select><select aria-label="Class letter" data-in="let" style="flex:1">${'ABCDEFGH'.split('').map(c=>`<option ${S.let===c?'selected':''}>${c}</option>`).join('')}</select></div></div>
    <div class="lbl">Safety promises</div>
    ${PLEDGE.map((t,i)=>`<button class="pl ${S.pledge[i]?'on':''}" data-a="pl" data-i="${i}"><i>✓</i><span>${t}</span></button>`).join('')}
-   <div class="lbl">Remember</div><ul class="rem"><li><b>Pencil only.</b> Pen ink separates too.</li><li><b>Acetone is flammable.</b> No flames.</li><li>Your teacher pours the acetone.</li><li>Keep goggles and gloves on until packing away is done.</li></ul></div>`;
+   <div class="lbl">Remember</div><ul class="rem"><li><b>Pencil only.</b> Pen ink separates too.</li><li><b>Acetone is flammable.</b> No flames.</li><li>Your teacher pours the acetone.</li><li>Keep goggles and gloves on until packing away is done.</li><li>If acetone splashes your glove, take it off and put on a new one.</li><li>Keep the room ventilated.</li></ul></div>`;
   const right=`<div class="pn t2"><h2>Spot the hazards</h2><p class="tip" style="margin:0">Tap everything that is a hazard in this lab.</p><div class="hz">${HAZ.map(h=>{const sel=H.sel.includes(h.id);let c=sel?'sel':'';if(H.chk){c=sel&&h.h?'good':sel&&!h.h?'bad':!sel&&h.h?'miss':''}
      return `<div class="hc ${c}" data-a="hz" data-id="${h.id}" role="button" tabindex="0">${h.img?I(h.img,'',h.t):`<div class="ic">${h.ic}</div>`}<span>${h.t}</span>${H.chk&&(c==='bad'||c==='miss')?`<small>${h.w}</small>`:''}</div>`}).join('')}</div>
    <div class="row"><button class="btn pri" data-a="hzchk">Check</button>${H.ok?'<span class="pill ok">All hazards found</span>':''}</div></div>`;
@@ -434,7 +434,7 @@ function safetyHTML(){const n=S.ppe.length,H=S.haz;
 function predHTML(){const P=S.pred;
   return `<div class="bench c1"><div class="pn t3"><div class="pred"><div class="phot"><figure class="pf" style="flex:.74">${I('farm','','A UAE indoor farm lit by red and blue LED lights')}<figcaption>UAE indoor farm: red and blue LEDs</figcaption></figure><figure class="pf" style="flex:1.5">${I('spinach_l','','Spinach leaves')}<figcaption>Spinach leaves</figcaption></figure></div>
    <div style="display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto"><h2>Make a prediction</h2>
-   <p style="margin:0">Spinach looks like one color. UAE indoor farms grow leafy greens under red and blue LED light. These are the colors the pigments use.</p>
+   <p style="margin:0">Spinach looks like one color. UAE indoor farms grow leafy greens under red and blue LED light. Chlorophylls use mostly red and blue light. The yellow and orange pigments use mostly blue.</p>
    <div><div class="lbl" style="margin-bottom:6px">How many colors might be hiding in one spinach leaf?</div><div class="nums">${[1,2,3,4,5,6].map(n=>`<button class="btn ${P.n===n?'pri':''}" data-a="predn" data-v="${n}">${n}</button>`).join('')}</div></div>
    <div><div class="lbl" style="margin-bottom:6px">Which band will travel furthest up the strip?</div><div class="cols">${PIG.map(p=>`<button class="btn ${P.fast===p.c?'pri':''}" data-a="predf" data-v="${p.c}"><i class="sw" style="background:${p.col}"></i>${p.c}</button>`).join('')}<button class="btn ${P.fast==='not sure'?'pri':''}" data-a="predf" data-v="not sure">not sure</button></div></div></div></div></div></div>`}
 const LENS_B='-14 39 36 34';
@@ -605,13 +605,15 @@ function prepDrop(id,tg,e,el){const A=S.A,B=S.B,C=S.C;
   bad('That does not go there.')}
 function applyMortSoon(){requestAnimationFrame(()=>requestAnimationFrame(applyMort))}
 function autoview(){if(S.step!==2)return;const g=['A','B','C'];if(groupDone(S.view)){const nx=g.find(x=>!groupDone(x));if(nx&&nx!==S.view)setTimeout(()=>{if(S.step===2&&groupDone(S.view)){S.view=nx;save();render()}},500)}}
-function binHint(it){if(it.bin==='solvent')return 'Used acetone is flammable waste. It goes in the solvent waste bottle, using the funnel.';
-  if(it.bin==='wash')return 'Glassware, the pipette and the mortar are washed with dish soap in the wash tray.';
+function binHint(it){if(it.id==='pick')return 'A used pipette is single-use. Do not wash it. It is thrown away.';if(it.id==='mort')return 'First empty the leftover extract into the waste bottle. Then wash the mortar in the wash tray.';if(it.bin==='solvent')return 'Used acetone is flammable waste. It goes in the solvent waste bottle, using the funnel.';
+  if(it.bin==='wash')return 'Glassware and the mortar are washed with dish soap in the wash tray.';
   if(it.bin==='cabinet')return 'Flammable bottles are stored in the flammables cabinet.';
-  if(it.bin==='organic')return 'Spinach is organic waste.';if(it.bin==='strips')return 'Used paper strips have their own bin.';return 'Not there. Think about what it is made of.'}
+  if(it.bin==='organic')return 'Spinach is organic waste.';if(it.bin==='strips')return 'Used paper strips have their own bin. (In class you stick yours on your worksheet.)';return 'Not there. Think about what it is made of.'}
 function flashBin(k,ok){const b=document.querySelector(`[data-drop="bin:${k}"]`);if(b){b.classList.add(ok?'flashok':'flashbad');setTimeout(()=>b&&b.classList.remove('flashok','flashbad'),600)}}
 function packDrop(id,k){const it=ITEMS.find(i=>i.id===id),po=PPEOUT.find(p=>p.id===id);
-  if(it){if(it.id==='beak'&&!S.pk.done.acet){bad('Empty the used acetone into the waste bottle before washing the beaker.');flashBin(k,0);return}
+  if(it){if(it.id==='mort'&&k==='solvent'&&!S.pk.emptied){S.pk.emptied=1;HELD=null;say('The leftover extract is in the waste bottle. Now wash the mortar.',false,true);persist();return}
+    if(it.id==='mort'&&k==='wash'&&!S.pk.emptied){bad('Empty the leftover extract into the waste bottle before washing the mortar.');flashBin(k,0);return}
+    if(it.id==='beak'&&!S.pk.done.acet){bad('Empty the used acetone into the waste bottle before washing the beaker.');flashBin(k,0);return}
     if(k===it.bin){S.pk.done[it.id]=1;HELD=null;say('Sorted.',false,true);persist()}else{bad(binHint(it));flashBin(k,0)}return}
   if(po){if(ITEMS.some(i=>!S.pk.done[i.id])){bad('Finish sorting the lab items before you take off your PPE.');return}
     const nx=PPEOUT[S.pk.out.length];if(po.id!==nx.id){bad('Take off your PPE in reverse order: gloves, goggles, lab coat.');return}
