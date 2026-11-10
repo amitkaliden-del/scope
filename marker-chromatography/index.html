@@ -444,6 +444,23 @@ img.co{mix-blend-mode:normal!important;filter:drop-shadow(0 7px 9px #000b) drop-
 @keyframes fpop{0%,100%{transform:scale(.6);opacity:.6}50%{transform:scale(1.25);opacity:1}}
 .hands .hh{display:none}
 @media (prefers-reduced-motion:reduce){.hands.washing .wat,.hands.washing .hl,.hands.washing .hr,.hands.washing .foam circle{animation:none!important}}
+/* post-lab questions */
+.rate{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rate>b{min-width:86px;font-size:15px}
+.rb{display:flex;gap:6px;flex:1;min-width:0}
+.rp{flex:1;min-width:0;display:grid;justify-items:center;gap:0;padding:6px 4px;border-radius:14px;border:1px solid var(--line);background:#150f33;color:var(--ink);cursor:pointer;min-height:58px;transition:transform .15s,box-shadow .2s}
+.rp .re{font-size:20px;line-height:1}.rp .rn{font:700 16px var(--mono)}.rp small{font-size:11px;color:var(--mut)}
+.rp.on{background:linear-gradient(135deg,#9d6bff,#3df0ff);color:#0d0a22;border-color:transparent;box-shadow:0 0 0 2px #fff3,0 0 18px #3df0ffaa;transform:translateY(-2px) scale(1.04);animation:rpop .4s cubic-bezier(.3,1.6,.5,1)}
+.rp.on small{color:#0d0a22}
+@keyframes rpop{0%{transform:scale(.88)}100%{transform:translateY(-2px) scale(1.04)}}
+.dok{display:inline-block;font:700 10px var(--mono);letter-spacing:.06em;padding:2px 6px;border-radius:99px;border:1px solid #9d6bff88;color:#cdbcff;background:#9d6bff22;vertical-align:middle;margin-left:6px}
+.qn{display:inline-block;background:linear-gradient(90deg,#ff4fd8,#9d6bff);color:#fff;border-radius:8px;padding:1px 8px;margin-right:4px;font-family:var(--mono)}
+.ext{display:inline-block;font:700 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:99px;background:#b8ff3d;color:#0d0a22}
+.supbox{background:#3df0ff14;border:1px dashed #3df0ff88;border-radius:10px;padding:8px 10px;font-size:14px;line-height:1.35}
+.growth{display:grid;gap:8px;padding:10px;border-radius:14px;background:#150f33;border:1px solid var(--line)}
+.gr{display:flex;align-items:center;gap:8px}.gr>b{min-width:80px}.gr .gb{min-width:34px;text-align:center;padding:4px 8px;border-radius:10px;background:#201748;font:700 16px var(--mono)}
+.gr .gb.up{background:linear-gradient(90deg,#b8ff3d,#3df0ff);color:#0d0a22;animation:rpop .6s}
+.gr em{font-style:normal;color:#b8ff3d;font-weight:700}
+@media (prefers-reduced-motion:reduce){.rp.on,.gr .gb.up{animation:none}}
 
 </style>
 <div id="app">
@@ -492,27 +509,38 @@ const ITEMS=[
  {id:'cup',t:'Cup (empty it first)',img:'cup0',bin:'wash'}];
 const BINDEF={general:{t:'General waste bin',img:'bin_general'},sink:{t:'Sink',img:'sink'},wash:{t:'Wash tray: soap, sponge, drying rack',img:'wash_tray'}};
 const NWORDS=6;
+const SK=['Interpret','Link','Evaluate'],LV=[['0','Need help','🆘'],['1','Partly','🌗'],['2','Independently','🚀']];
+const PGN={rec:'1 Record',int:'2 Interpret',bio:'3 Biology',ext:'4 Extension',fin:'5 Finish'};
+const PQ=[
+{k:'a3',n:'Q3',dok:2,pg:'int',t:'What does your result suggest about the ink?',h:'Support your conclusion with two observations from your result.',sup:'I observed ___ and ___. This suggests the ink ___ because ___.'},
+{k:'a4',n:'Q4',dok:2,pg:'int',t:'Explain why different dyes can travel different distances through the paper.',h:'',sup:'Use: dissolve in the solvent / attraction to the paper / different distances.'},
+{k:'a5',n:'Q5',dok:3,pg:'int',t:'A student puts the starting ink below the water level. Predict how this affects the result and explain why.',h:'',sup:''},
+{k:'a6',n:'Q6',dok:3,pg:'bio',t:'How does a mixture of pigments help a leaf capture light for photosynthesis?',h:'',sup:'Different pigments absorb ___. This helps the leaf because ___.'},
+{k:'a7',n:'Q7',dok:3,pg:'bio',t:'State one thing marker chromatography cannot tell us about a leaf. Suggest a further test and explain what it would help you find out.',h:'',sup:'This model cannot show ___. I would test ___ to find out ___.'},
+{k:'s1',n:'S1',dok:4,pg:'ext',ext:1,t:'UAE grower: An Abu Dhabi nursery claims, “Green leaves need green light most.” Evaluate the claim using the reference. Suggest a measurement of photosynthesis and two conditions to keep the same in a lamp test.',h:'',sup:''},
+{k:'s2',n:'S2',dok:3,pg:'ext',ext:1,t:'One marker produces one visible colour. Does this prove the ink contains only one dye? Justify your answer.',h:'',sup:''}];
+const REFTXT='Leaf pigments absorb light in thylakoid membranes. Different pigments absorb different wavelengths. Chlorophyll absorbs red and blue strongly; much green light is reflected or transmitted.';
 const words=s=>(String(s||'').trim().match(/\S+/g)||[]).length;
 /* ===== state ===== */
 function fresh(){return{v:1,step:-1,max:0,name:'',cls:'10A',gr:'10',let:'A',t0:Date.now(),errs:0,errLog:{},dev:0,
  pledge:[0,0,0,0],mk:null,q1:'',
  P:{ink:0,fold:0,water:0,placed:0,fault:0,t0:null,startMin:null,stopped:0,stopMin:null,dur:null,flat:0},
  view:'lab',m:{kind:'centre',pins:[],rows:[0,1,2,3].map(()=>({c:'',p:''})),ts:'',te:'',q2:'',q3:'',q4:'',chk:[0,0,0,0]},
- pk:{done:{},wash:0},finished:0,celeb:0}}
+ pk:{done:{},wash:0},w:{rv:'rec',b:[-1,-1,-1],a:[-1,-1,-1],far:'',a3:'',a4:'',a5:'',a6:'',a7:'',s1:'',s2:'',idea:'',ev:'',sh:{}},finished:0,celeb:0}}
 let S=fresh(),HELD=null,NOCLICK=0,WASH=null,TK=null,DRG=null,BUSY=0,ANIM={},LASTP={x:innerWidth/2,y:innerHeight/2},LASTN={s:-9,n:0};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const I=(n,c,alt)=>`<img data-i="${n}" class="${(c||'')+(CUT.has(n)?' co':'')}" alt="${alt||''}" draggable="false">`;
 const LT=n=>GLASS(n)?' lt':'';
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function load(){try{const j=localStorage.getItem(KEY);if(j){const o=JSON.parse(j);if(o&&o.v===1){if(o.view==='rec')o.view='lab';if(o.P)o.P.pouring=0;return o}}}catch(e){}return null}
+function load(){try{const j=localStorage.getItem(KEY);if(j){const o=JSON.parse(j);if(o&&o.v===1){if(o.view==='rec'||o.view==='q')o.view=o.view==='q'?'tab':'lab';if(!o.w)o.w=fresh().w;if(o.P)o.P.pouring=0;return o}}}catch(e){}return null}
 const hhmm=m=>{m=((Math.round(m)%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
 const parseT=s=>{const x=String(s||'').trim().match(/^(\d{1,2})[:.](\d{2})$/);return x?(+x[1])*60+(+x[2]):null};
 const frontP=()=>S.P.placed&&S.P.t0?Math.min(1,(Date.now()-S.P.t0)/(SIM_S*1000)):0;
 const simMin=()=>S.P.t0?Math.round((Date.now()-S.P.t0)/(SIM_S*1000)*SIM_MIN):0;
 function say(t,bad,good){const m=$('#msg');if(!m)return;m.textContent=t||coach();m.className=bad?'bad':good?'good':'';if(bad){void m.offsetWidth;m.classList.add('flash');S.errs++;S.errLog[t]=(S.errLog[t]||0)+1;sfx('bad')}}
 const bad=t=>say(t,true);
-function coach(){return ['Tick your safety promises. Then go to the next step.','Choose a marker. Then write your prediction.','Tap an item on the shelf. Then tap where it goes. You can also drag it.','Do not touch the cup while the water climbs.','Label your drawing. Fill in the table. Then answer the questions.','Put every item in the right place. Then wash your hands.','Check your results. Then finish the lab.'][S.step]||''}
+function coach(){return ['Tick your safety promises. Then go to the next step.','Choose a marker. Then write your prediction.','Tap an item on the shelf. Then tap where it goes. You can also drag it.','Do not touch the cup while the water climbs.','Label your drawing. Then fill in the table and the times.','Put every item in the right place. Then wash your hands.','Answer the questions on each page. Then finish the lab.'][S.step]||''}
 
 /* ===== sound (synthesised in the browser, no files) ===== */
 let AC=null,MUTE=false;try{MUTE=localStorage.getItem(KEY+'m')==='1'}catch(e){}
@@ -575,18 +603,21 @@ function reqs(){const R=[],P=S.P,m=S.m;
  case 4:{const nv=(v,t)=>S.view===v?'':`Press <b>${t}</b>. `;
   R.push({l:'Label centre, ink circle and a colour',d:labDone(),a:nv('lab','1 Label')+'Pick a label button. Tap the picture: <b>Centre</b>, <b>Original ink circle</b>, then each <b>Colour region</b>.'});
   R.push({l:'Water start and stop times',d:timesOK(),a:nv('tab','2 Table')+'Type your <b>start</b> and <b>stop</b> times. Look at the clock in the Run step.'});
-  R.push({l:'Record the colours in the table',d:rowsOK(),a:nv('tab','2 Table')+'In the table, choose each <b>colour</b> and where it is (inner, middle, outer). Write “unclear” if colours overlap.'});
-  R.push({l:'Answer Q2',d:words(m.q2)>=NWORDS,a:nv('q','3 Questions')+`Answer <b>Q2</b> (${words(m.q2)}/${NWORDS} words).`});
-  R.push({l:'Answer Q3',d:words(m.q3)>=NWORDS,a:nv('q','3 Questions')+`Answer <b>Q3</b> (${words(m.q3)}/${NWORDS} words).`});
-  R.push({l:'Answer Q4',d:words(m.q4)>=NWORDS,a:nv('q','3 Questions')+`Answer <b>Q4</b> (${words(m.q4)}/${NWORDS} words).`});
-  R.push({l:'Self-check',d:m.chk.every(x=>x),a:nv('q','3 Questions')+'Tick all 4 boxes in the <b>self-check</b>.'});break}
+  R.push({l:'Record the colours in the table',d:rowsOK(),a:nv('tab','2 Table')+'In the table, choose each <b>colour</b> and where it is (inner, middle, outer). Write “unclear” if colours overlap.'});break}
  case 5:{const left=ITEMS.filter(i=>!S.pk.done[i.id]).length;
   R.push({l:'Sort all 3 lab items',d:left===0,a:`Drag each item to the right place, or tap it and then tap the place. <b>${left} left</b>.`});
   R.push({l:'Wash your hands',d:!!S.pk.wash,a:'Press <b>Wash hands (10 s)</b>.'});break}
- case 6:break}
+
+ case 6:{const w=S.w,nw=(v,t)=>w.rv===v?'':`Press <b>${t}</b>. `;
+  R.push({l:'Rate your skills (before)',d:w.b.every(x=>x>=0),a:nw('rec','1 Record')+'Rate each skill <b>0, 1 or 2</b> before you write.'});
+  R.push({l:'Q2: furthest colour',d:!!w.far,a:nw('rec','1 Record')+'<b>Q2</b>: choose the colour that travelled <b>furthest</b>.'});
+  PQ.forEach(q=>R.push({l:q.n,d:words(w[q.k])>=NWORDS,a:nw(q.pg,PGN[q.pg])+`Answer <b>${q.n}</b> (${words(w[q.k])}/${NWORDS} words).`}));
+  R.push({l:'Rate your skills again',d:w.a.every(x=>x>=0),a:nw('fin','5 Finish')+'Rate each skill <b>0, 1 or 2</b> again in the exit ticket.'});
+  R.push({l:'One idea I improved',d:words(w.idea)>=3,a:nw('fin','5 Finish')+'Write <b>one idea you improved</b> (3+ words).'});
+  R.push({l:'Evidence question',d:!!w.ev,a:nw('fin','5 Finish')+'Choose the question that shows your improvement.'});break}}
  return R}
 function todoHTML(){const r=reqs(),n=r.filter(x=>x.d).length,cur=r.find(x=>!x.d);
- const tx=cur?cur.a:(S.step===6?(S.finished?'Lab finished. Your answers are saved with this lab.':'Check your results. Then press <b>Finish lab</b>.'):'All done here. Press <b>Next</b>.');
+ const tx=cur?cur.a:(S.step===6?(S.finished?'Lab finished. Your answers are saved with this lab.':'All answered. Press <b>Finish lab</b>.'):'All done here. Press <b>Next</b>.');
  return `<div class="todo"><div class="tl">NEXT</div><div class="tx" id="act">${tx}</div><div class="tp"><b id="cnt">${n}/${r.length}</b><div class="bar"><i style="width:${r.length?n/r.length*100:0}%"></i></div></div></div>`}
 function refreshTodo(){if(S.step<0)return;checkProgress();const t=$('.todo');if(t){const d=document.createElement('div');d.innerHTML=todoHTML();t.replaceWith(d.firstChild)}nudge()}
 function nudge(){const b=$('#bNext');if(b)b.classList.toggle('nudge',S.step>=0&&S.step<6&&!reqs().find(x=>!x.d))}
@@ -622,7 +653,7 @@ function safetyHTML(){
 function predHTML(){
  const grid=`<div class="mkg">${MARKERS.map(m=>`<div class="mkc ${S.mk===m.id?'sel':''}" data-a="mk" data-id="${m.id}" role="button" tabindex="0" aria-label="${m.t} marker">${I(m.img,'',m.t+' marker')}<span><i class="sw2" style="background:${m.col}"></i>${m.t}</span></div>`).join('')}</div>`;
  return `<div class="bench" style="grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)"><div class="pn t1"><h2>Choose a marker</h2>${grid}</div>
- <div class="pn t3"><h2>1. Predict before you start</h2><p class="qh">Could your chosen marker contain several dyes? Which colours might appear, and why?<small>${S.mk?'Your marker: <b>'+esc(MK(S.mk).t)+'</b>. ':''}Give a reason. You are not marked on guessing the colours.</small></p>
+ <div class="pn t3"><h2>Prediction before you start</h2><p class="qh">Could your chosen marker contain several dyes? Which colours might appear, and why?<small>${S.mk?'Your marker: <b>'+esc(MK(S.mk).t)+'</b>. ':''}Give a reason. You are not marked on guessing the colours.</small></p>
  <textarea class="ta" data-in="q1" aria-label="Question 1 prediction" placeholder="I predict …, because …">${esc(S.q1)}</textarea></div></div>`}
 function foldBtn(){const P=S.P;if(!P.ink||P.placed||P.fault||P.pouring)return '';const L=['Fold in half','Fold again','Open into a cone'][P.fold];return P.fold<3?`<button class="btn pri" data-a="fold">${L}</button>`:''}
 function inkSVG(m,draw){const pen=`<g><animateMotion dur=".9s" fill="freeze" path="M56.5 48 A6.5 6.5 0 1 1 43.5 48 A6.5 6.5 0 1 1 56.5 48"/><animate attributeName="opacity" from="1" to="0" begin=".9s" dur=".25s" fill="freeze"/><polygon points="0,0 -1.1,-3.4 1.1,-3.4" fill="#222"/><rect x="-1.4" y="-14" width="2.8" height="10.6" rx="1" fill="${m.col}" stroke="#fff" stroke-width=".35"/></g>`;
@@ -650,8 +681,8 @@ function runHTML(){const P=S.P,p=frontP(),m=MK(S.mk)||MARKERS[0],bl=ANIM.bloom;
 function pinHTML(p,i){const rg=S.m.pins.filter(q=>q.k==='region'),b=p.k==='centre'?'C':p.k==='ring'?'I':rg.indexOf(p)+1;
  return `<div class="pin k-${p.k}" style="left:${p.x*100}%;top:${p.y*100}%" data-a="unpin" data-i="${i}" role="button" aria-label="Remove label ${LBL[p.k]}"><b>${b}</b><span>${LBL[p.k]}${p.k==='region'?' '+b:''}</span></div>`}
 function pinsSorted(){const rg=S.m.pins.filter(p=>p.k==='region').sort((a,b)=>Math.hypot(a.x-.5,a.y-.5)-Math.hypot(b.x-.5,b.y-.5));S.m.pins=S.m.pins.filter(p=>p.k!=='region').concat(rg)}
-function measureHTML(){const mk=MK(S.mk)||MARKERS[0];return S.view==='q'?qHTML(mk):S.view==='tab'?tabHTML(mk):labHTML(mk)}
-const tabsHTML=()=>`<div class="subtabs">${[['lab','1 Label',labDone()],['tab','2 Table',timesOK()&&rowsOK()],['q','3 Questions',qDone()]].map(([v,t,d])=>`<button class="btn sm ${S.view===v?'on':''}" data-a="view" data-v="${v}">${d?'✓ ':''}${t}</button>`).join('')}</div>`;
+function measureHTML(){const mk=MK(S.mk)||MARKERS[0];return S.view==='tab'?tabHTML(mk):labHTML(mk)}
+const tabsHTML=()=>`<div class="subtabs">${[['lab','1 Label',labDone()],['tab','2 Table',timesOK()&&rowsOK()]].map(([v,t,d])=>`<button class="btn sm ${S.view===v?'on':''}" data-a="view" data-v="${v}">${d?'✓ ':''}${t}</button>`).join('')}</div>`;
 function labHTML(mk){const m=S.m,rg=m.pins.filter(p=>p.k==='region').length;
  const img=`<div class="pn t1 imgp"><div class="rwrap"><div class="rimg nolbl big" data-a="rimg" role="img" aria-label="Your filter paper with colour rings. Tap to place a label.">${I(mk.res,'','Filter paper with colour rings')}${m.pins.map(pinHTML).join('')}</div></div></div>`;
  const rail=`<div class="pn t2 scroll">${tabsHTML()}<h2>Label your drawing</h2>
@@ -665,7 +696,7 @@ function tabHTML(mk){const m=S.m;
   <div class="field" style="flex:1;min-width:0"><label class="lbl" for="te">Water stop</label><input id="te" data-in="te" value="${esc(m.te)}" placeholder="08:25" inputmode="numeric" autocomplete="off" style="width:100%"></div></div>
   <div class="rwrap thumb"><div class="rimg nc nolbl">${I(mk.res,'','Your labelled drawing')}${m.pins.map(p=>pinHTML(p,0).replace('data-a="unpin"','')).join('')}</div></div></div>`;
  const right=`<div class="pn t3 scroll"><h2>Colours from the centre outwards</h2><table class="mt"><thead><tr><th>No.</th><th>Colour seen</th><th>Where</th></tr></thead><tbody>${m.rows.map((r,i)=>`<tr><td>${i+1}</td><td><select data-in="rc.${i}" aria-label="Colour ${i+1}"><option value="">choose</option>${COLS.map(c=>`<option ${r.c===c?'selected':''}>${c}</option>`).join('')}</select></td><td><select data-in="rp.${i}" aria-label="Position ${i+1}"><option value="">choose</option>${POS.map(c=>`<option ${r.p===c?'selected':''}>${c}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table>
-  <p class="tip" style="margin:0">Show what you see. Write “unclear” if colours overlap. Do not invent results.</p><button class="btn ${timesOK()&&rowsOK()?'pri':''}" data-a="view" data-v="q">Questions Q2 to Q4 →</button></div>`;
+  <p class="tip" style="margin:0">Show what you see. Write “unclear” if colours overlap. Do not invent results.</p><button class="btn ${timesOK()&&rowsOK()?'pri':''}" data-a="gonext">Next: pack away →</button></div>`;
  return `<div class="bench" style="grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)">${left}${right}</div>`}
 function qHTML(mk){const m=S.m,ck=['Labelled colour drawing','Evidence','Biology link','Model limit'];
  const q=(n,title,help,ta,extra)=>`<div class="pn t${n===2?5:n===3?3:4}"><h2>${n}. ${title}</h2><p class="qh">${help}</p>${extra||''}<textarea class="ta" data-in="q${n}" aria-label="Question ${n}">${esc(m['q'+n])}</textarea><div class="stat">${words(m['q'+n])} words (need ${NWORDS}+)</div></div>`;
@@ -673,6 +704,34 @@ function qHTML(mk){const m=S.m,ck=['Labelled colour drawing','Evidence','Biology
  ${q(3,'How does the model connect to photosynthesis?','Use the lesson reference: why can different pigments help leaves capture light?<small>Support: Use the leaf-pigment reference for Q3.</small>','', '<div><button class="btn sm" data-a="ref">Open the leaf-pigment reference</button></div>')}
  ${q(4,'What is one limit of this model?','Explain why marker results cannot identify leaf pigments. Suggest an improvement.<small>Support: Use your experiment for Q4.</small>')}
  <div class="pn full t1" style="flex-direction:row;align-items:center;flex-wrap:wrap"><span class="lbl">Self-check</span><div class="sc">${ck.map((t,i)=>`<button class="btn ${m.chk[i]?'on':''}" data-a="chk" data-i="${i}">${m.chk[i]?'✓ ':''}${t}</button>`).join('')}</div><div style="margin-left:auto">${tabsHTML()}</div></div></div>`}
+
+const wTabs=()=>{const w=S.w,ok={rec:w.b.every(x=>x>=0)&&!!w.far,int:PQ.filter(q=>q.pg==='int').every(q=>words(w[q.k])>=NWORDS),bio:PQ.filter(q=>q.pg==='bio').every(q=>words(w[q.k])>=NWORDS),ext:PQ.filter(q=>q.pg==='ext').every(q=>words(w[q.k])>=NWORDS),fin:w.a.every(x=>x>=0)&&words(w.idea)>=3&&!!w.ev};
+ return `<div class="subtabs">${Object.keys(PGN).map(v=>`<button class="btn sm ${w.rv===v?'on':''}" data-a="rv" data-v="${v}">${ok[v]?'✓ ':''}${PGN[v]}</button>`).join('')}</div>`};
+const rateRows=(t)=>SK.map((s,i)=>`<div class="rate"><b>${s}</b><div class="rb">${LV.map(([v,l,e])=>`<button class="rp ${S.w[t][i]===+v?'on':''}" data-a="rate" data-t="${t}" data-i="${i}" data-v="${v}"><span class="re" aria-hidden="true">${e}</span><span class="rn">${v}</span><small>${l}</small></button>`).join('')}</div></div>`).join('');
+const dokB=n=>`<span class="dok" title="Depth of Knowledge level ${n}">DOK ${n}</span>`;
+function pqHTML(q,cls){const w=S.w,sh=w.sh[q.k];
+ return `<div class="pn ${cls}"><h2><span class="qn">${q.n}</span> ${q.ext?'<span class="ext">Extension question</span>':''} ${dokB(q.dok)}</h2><p class="qh"><b>${q.t}</b>${q.h?`<small>${q.h}</small>`:''}</p>${q.sup?`<div><button class="btn sm ${sh?'on':''}" data-a="sup" data-k="${q.k}">💡 Support</button></div>${sh?`<div class="supbox">${q.sup}</div>`:''}`:''}<textarea class="ta" data-in="w.${q.k}" aria-label="${q.n}">${esc(w[q.k])}</textarea><div class="stat">${words(w[q.k])} words (need ${NWORDS}+)</div></div>`}
+const refBox=()=>`<div class="pn t1"><h2>Reference</h2><p class="qh">${REFTXT}</p></div>`;
+function postHTML(){const w=S.w,mk=MK(S.mk)||MARKERS[0];
+ const tabsRow=`<div class="pn full t1" style="flex-direction:row;align-items:center;flex-wrap:wrap"><span class="lbl">After the investigation</span><div style="margin-left:auto">${wTabs()}</div></div>`;
+ if(w.rv==='int')return `<div class="bench qs">${PQ.filter(q=>q.pg==='int').map((q,i)=>pqHTML(q,'t'+[5,3,4][i])).join('')}${tabsRow}</div>`;
+ if(w.rv==='bio')return `<div class="bench qs">${PQ.filter(q=>q.pg==='bio').map((q,i)=>pqHTML(q,'t'+[5,3][i])).join('')}${refBox()}${tabsRow}</div>`;
+ if(w.rv==='ext')return `<div class="bench qs">${PQ.filter(q=>q.pg==='ext').map((q,i)=>pqHTML(q,'t'+[5,3][i])).join('')}${refBox()}${tabsRow}</div>`;
+ if(w.rv==='fin'){const m=S.m,tc=Math.round((Date.now()-S.t0)/60000);
+  const gr=SK.map((s,i)=>{const b=w.b[i],a=w.a[i],d=a>=0&&b>=0?a-b:null;return `<div class="gr"><b>${s}</b><span class="gb">${b<0?'–':b}</span><i class="ga">→</i><span class="gb ${d>0?'up':''}">${a<0?'–':a}</span><em>${d==null?'':d>0?'▲ +'+d:d<0?'▼ '+d:'same'}</em></div>`}).join('');
+  return `<div class="bench" style="grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)"><div class="pn t5 scroll">${wTabs()}<h2>Peer feedback and tidy up</h2><div class="supbox" style="display:block">Swap sheets with a partner. Peer feedback and your improved answer go on your <b>paper sheet</b>.</div><div class="supbox" style="display:block">Tidy up: close the activity when asked. Return shared equipment, clear rubbish and organise your workspace.</div>
+  <h2>Exit ticket</h2><p class="qh">Rate again. <small>0 = need help, 1 = partly, 2 = independently</small></p>${rateRows('a')}
+  <label class="lbl" for="idea">One idea I improved</label><input id="idea" data-in="w.idea" value="${esc(w.idea)}" autocomplete="off" style="width:100%">
+  <label class="lbl" for="ev">Evidence of my improvement is in question</label><select id="ev" data-in="w.ev" aria-label="Evidence question"><option value="">choose</option>${PQ.map(q=>`<option ${w.ev===q.n?'selected':''}>${q.n}</option>`).join('')}</select></div>
+  <div class="pn t1 scroll"><h2>${esc(S.name||'Student')} · ${S.cls}</h2><p style="margin:0">Marker: <b>${esc(mk.t)}</b> · Water start <b>${esc(m.ts)}</b> · stop <b>${esc(m.te)}</b></p><div class="growth"><h2 style="margin:0">Skill growth</h2>${gr}</div><p class="stat">Time ${tc} min · mistakes ${S.errs}</p>
+  <div class="row"><button class="btn" data-a="copy">Copy answers</button>${/github\.io$/.test(location.hostname)?'<button class="btn pri" data-a="print">Print / Save as PDF</button><button class="btn" data-a="dl">Download answers</button>':'<span class="tip">The Print / Save as PDF button appears on the published (github.io) version.</span>'}</div>
+  ${S.finished?`<div class="ok-box"><b>Lab finished.</b> Your answers are saved with this lab.</div>`:`<button class="btn pri bigbtn" data-a="finish">Finish lab</button>`}</div></div>`}
+ const cols=[...new Set(S.m.rows.map(r=>r.c).filter(Boolean))],vis=cols.length?cols.join(', '):'not shown';
+ return `<div class="bench" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div class="pn t5 scroll">${wTabs()}<h2>Before you write</h2><p class="qh">Rate each skill. <small>0 = need help, 1 = partly, 2 = independently</small></p>${rateRows('b')}
+  <h2><span class="qn">Q1</span> ${dokB(1)}</h2><p class="qh">Marker colour: <b>${esc(mk.t)}</b> · Solvent: <b>water</b></p>
+  <h2><span class="qn">Q2</span> ${dokB(2)}</h2><p class="qh">Your labelled colour pattern is on the right. <br>Visible colours: <b>${esc(vis)}</b></p>
+  <label class="lbl" for="far">Which colour travelled furthest from the original ink position?</label><select id="far" data-in="w.far" aria-label="Furthest colour"><option value="">choose</option>${[...cols,'unclear'].map(c=>`<option ${w.far===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+  <div class="pn t1"><h2>Your result</h2><div class="rwrap"><div class="rimg nc nolbl">${I(mk.res,'','Your labelled filter paper')}${S.m.pins.map(p=>pinHTML(p,0).replace('data-a="unpin"','')).join('')}</div></div></div></div>`}
 function packHTML(){const pk=S.pk,left=ITEMS.filter(i=>!pk.done[i.id]);
  const tile=i=>`<div class="it${LT(i.img)} ${HELD===i.id?'held':''}" data-drag="${i.id}" role="button" tabindex="0" aria-label="${i.t}">${I(i.img,'',i.t)}<span>${i.t}</span></div>`;
  const cnt=k=>ITEMS.filter(i=>i.bin===k&&pk.done[i.id]).length;
@@ -700,7 +759,7 @@ function doneHTML(){const cols=['#2ee6a8','#ffd166','#ff6b9d','#6ec1ff','#b79cff
  <p class="cel-s">You can close this page <b>OR</b></p>
  <button class="btn pri bigbtn" data-a="back2res">Back to my results</button></div></div>`}
 /* ===== render ===== */
-function stageHTML(){switch(S.step){case -1:return welcome();case 0:return safetyHTML();case 1:return predHTML();case 2:return prepareHTML();case 3:return runHTML();case 4:return measureHTML();case 5:return packHTML();case 6:return S.celeb?doneHTML():resultsHTML()}}
+function stageHTML(){switch(S.step){case -1:return welcome();case 0:return safetyHTML();case 1:return predHTML();case 2:return prepareHTML();case 3:return runHTML();case 4:return measureHTML();case 5:return packHTML();case 6:return S.celeb?doneHTML():postHTML()}}
 function hydrate(root){(root||document).querySelectorAll('img[data-i]').forEach(i=>{if(!i.getAttribute('src'))i.src=IMG[i.dataset.i]||''})}
 function render(){const st=S.step;
  $('#steps').innerHTML=st<0?'':STEPS.map((n,i)=>`<div class="chip ${i<st?'done':''} ${i===st?'cur':''}" ${i<=S.max&&i!==st?`data-a="goto" data-i="${i}" role="button" tabindex="0"`:''}><i>${i+1}</i>${n}</div>`).join('');
@@ -785,6 +844,10 @@ document.addEventListener('click',e=>{
  case 'replay':ANIM.bloom=1;sfx('bloom');render();return;
  case 'mute':setMute(!MUTE);if(!MUTE)sfx('pop');return;
  case 'chk':m.chk[+d.i]=m.chk[+d.i]?0:1;persist();return;
+ case 'rv':S.w.rv=d.v;say('');sfx('tap');persist();return;
+ case 'rate':S.w[d.t][+d.i]=+d.v;sfx('pop');persist();return;
+ case 'sup':S.w.sh[d.k]=S.w.sh[d.k]?0:1;sfx('tap');persist();return;
+ case 'gonext':if(canNext())goStep(S.step+1);return;
  case 'ref':{const r=$('#ref');r.hidden=false;hydrate(r);return}
  case 'refx':$('#ref').hidden=true;return;
  case 'wash':if(!ITEMS.every(i=>S.pk.done[i.id])){bad('Sort the lab items first.');return}if(S.pk.wash||WASH)return;{let n=10;const b=$('#washB');b.textContent='Washing… '+n;const h=$('#hands');if(h){h.classList.add('washing');const bt=h.querySelector('b');if(bt)bt.textContent='Rub palms, backs of hands and between your fingers.'}sfx('wash');
@@ -792,7 +855,7 @@ document.addEventListener('click',e=>{
  case 'copy':copyAns();return;
  case 'print':buildPrint();try{window.print()}catch(x){}return;
  case 'dl':try{const bl=new Blob([ansText()],{type:'text/plain'}),u=URL.createObjectURL(bl),a2=document.createElement('a');a2.href=u;a2.download='colour-detectives-results.txt';a2.click()}catch(x){}return;
- case 'finish':S.finished=1;S.celeb=1;sfx('done');persist();track('done',{report:reportHTML()});return;
+ case 'finish':{const u=reqs().find(x=>!x.d);if(u){bad('Not yet: '+u.l+'.');return}}S.finished=1;S.celeb=1;sfx('done');persist();track('done',{report:reportHTML()});return;
  case 'back2res':S.celeb=0;persist();return;
  case 'dgo':{const t=+$('#dsel').value;for(let i=0;i<t;i++)fillStep(i);S.step=t;if(t>S.max)S.max=t;HELD=null;if(t<6)S.finished=0;persist();say('Developer: jumped to '+STEPS[t]+'.');$('#dsel').value=t;return}
  case 'dfill':fillStep(S.step);persist();say('Developer: step filled.');return;
@@ -801,7 +864,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.in;if(!k)return;const v=e.target.value,m=S.m;
  if(k==='name'){S.name=v;if(/^developer$/i.test(v.trim())&&!S.dev){S.dev=1;$('#dev').hidden=false;const sel=$('#dsel');if(!sel.options.length)STEPS.forEach((n,i)=>sel.add(new Option((i+1)+' '+n,i)))}}
  else if(k==='gr'||k==='let'){if(k==='gr')S.gr=v;else S.let=v;S.cls=S.gr+S.let}
- else if(k==='q1')S.q1=v;else if(k==='q2'||k==='q3'||k==='q4')m[k]=v;else if(k==='ts'||k==='te')m[k]=v;
+ else if(k==='q1')S.q1=v;else if(k.startsWith('w.'))S.w[k.slice(2)]=v;else if(k==='q2'||k==='q3'||k==='q4')m[k]=v;else if(k==='ts'||k==='te')m[k]=v;
  else if(k.startsWith('rc.')||k.startsWith('rp.')){const i=+k.split('.')[1];m.rows[i][k[1]==='c'?'c':'p']=v;
   if(k[1]==='c'&&v&&v!=='unclear'){const mk=MK(S.mk);if(mk&&!mk.known.includes(v))say('Look at your picture again. Do you really see '+v+'? Write “unclear” if you are not sure.')}}
  save();if(S.step===4&&(k==='ts'||k==='te')){const msg=$('#msg');if(msg&&parseT(v)!=null&&S.P.startMin!=null&&k==='ts'&&Math.abs(parseT(v)-S.P.startMin)>1)say('Check the clock in the Run step for your start time.')}
@@ -809,7 +872,7 @@ document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset
 document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.in;if(k&&S.step>=0){save();refreshTodo()}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#ref').hidden)$('#ref').hidden=true;if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.chip[data-a],.mkc,.bn,.it[data-drag]')){e.preventDefault();e.target.click()}});
 /* ===== answers, print, report ===== */
-function ansText(){const m=S.m,mk=MK(S.mk)||{t:''};return `${TITLE}\n${S.name} (${S.cls})\nMarker: ${mk.t}\nWater start: ${m.ts}  Stop: ${m.te}\nQ1 Prediction: ${S.q1}\nColours (centre outwards): ${rowsTxt().join('; ')}\nLabels: ${labelsTxt()}\nQ2 What does your result show about the marker ink?\n${m.q2}\nQ3 How does the model connect to photosynthesis?\n${m.q3}\nQ4 What is one limit of this model?\n${m.q4}\nSelf-check: ${['labelled colour drawing','evidence','biology link','model limit'].filter((t,i)=>m.chk[i]).join(', ')}\n`}
+function ansText(){const m=S.m,mk=MK(S.mk)||{t:''};return `${TITLE}\n${S.name} (${S.cls})\nMarker: ${mk.t}\nWater start: ${m.ts}  Stop: ${m.te}\nPrediction: ${S.q1}\nColours (centre outwards): ${rowsTxt().join('; ')}\nLabels: ${labelsTxt()}\nSkills before: ${SK.map((s,i)=>s+' '+S.w.b[i]).join(', ')}\nQ2 Furthest colour: ${S.w.far}\n${PQ.map(q=>q.n+' (DOK '+q.dok+') '+q.t+'\\n'+S.w[q.k]).join('\\n')}\nSkills after: ${SK.map((s,i)=>s+' '+S.w.a[i]).join(', ')}\nOne idea I improved: ${S.w.idea} (evidence in ${S.w.ev})\n`}
 function labelsTxt(){const rg=S.m.pins.filter(p=>p.k==='region');const f=p=>`(${Math.round(p.x*100)}% across, ${Math.round(p.y*100)}% down)`;const c=pinOf('centre'),r=pinOf('ring');return [c?'Centre '+f(c):'',r?'Original ink circle '+f(r):'',...rg.map((p,i)=>'Colour region '+(i+1)+' '+f(p))].filter(Boolean).join('; ')}
 function copyAns(){const t=ansText(),fb=()=>{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');say('Answers copied.',false,true)}catch(x){bad('Select and copy the text manually.')}ta.remove()};
  try{navigator.clipboard.writeText(t).then(()=>say('Answers copied.',false,true),fb)}catch(x){fb()}}
@@ -822,10 +885,10 @@ function buildPrint(noimg){const m=S.m,mk=MK(S.mk)||{t:'',res:''},d=new Date().t
  <h2>1. Predict before you start</h2><p class="ps">Could your chosen marker contain several dyes? Which colours might appear, and why?</p><div class="ans">${esc(S.q1)}</div>
  <h2>My result: labelled drawing</h2>${draw}
  <table><thead><tr><th>No.</th><th>Colour seen</th><th>Inner / middle / outer</th></tr></thead><tbody>${m.rows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.c)}</td><td>${esc(r.p)}</td></tr>`).join('')}</tbody></table>
- <h2>2. What does your result show about the marker ink?</h2><div class="ans">${esc(m.q2)}</div>
- <h2>3. How does the model connect to photosynthesis?</h2><div class="ans">${esc(m.q3)}</div>
- <h2>4. What is one limit of this model?</h2><div class="ans">${esc(m.q4)}</div>
- <p><b>Self-check:</b> ${['labelled colour drawing','evidence','biology link','model limit'].map((t,i)=>(m.chk[i]?'☑ ':'☐ ')+t).join(' &nbsp; ')}</p>
+ <h2>After the investigation</h2><p><b>Skills before:</b> ${SK.map((s,i)=>s+' '+S.w.b[i]).join(' &nbsp; ')}</p>
+ <p><b>Q1</b> Marker colour: ${esc(mk.t)} &nbsp; Solvent: water</p><p><b>Q2</b> Visible colours: ${esc(rowsTxt().join('; ')||'not shown')} &nbsp; Furthest: ${esc(S.w.far)}</p>
+ ${PQ.map(q=>`<h2>${q.n}${q.ext?' (extension)':''} · DOK ${q.dok}</h2><p class="ps">${q.t}</p><div class="ans">${esc(S.w[q.k])}</div>`).join('')}
+ <p><b>Skills after:</b> ${SK.map((s,i)=>s+' '+S.w.a[i]).join(' &nbsp; ')}</p><p><b>One idea I improved:</b> ${esc(S.w.idea)} &nbsp; <b>Evidence in:</b> ${esc(S.w.ev)}</p>
  <p class="ps">Result pictures are illustrations. Results vary by marker and brand.</p>`}
 window.addEventListener('beforeprint',()=>{if(S.step===6)buildPrint()});
 /* ===== developer fill ===== */
@@ -838,7 +901,7 @@ function fillStep(n){const P=S.P,m=S.m;
  case 4:{const k=MK(S.mk).known;m.ts=hhmm(P.startMin);m.te=hhmm(P.stopMin);m.pins=[{k:'centre',x:.5,y:.5},{k:'ring',x:.58,y:.5},{k:'region',x:.7,y:.5},{k:'region',x:.8,y:.5}];pinsSorted();
   m.rows=[0,1,2,3].map(i=>({c:k[i]||'',p:k[i]?POS[Math.min(2,i)]:''}));m.q2=m.q2||'I observed several colour rings. This suggests the marker ink is a mixture of dyes.';m.q3=m.q3||'The model shows a mixture separating. Leaves have different pigments that absorb different light, so more light is captured.';m.q4=m.q4||'We tested marker ink, not leaf material, so we cannot identify leaf pigments. Repeating the test would help.';m.chk=[1,1,1,1];break}
  case 5:ITEMS.forEach(i=>S.pk.done[i.id]=1);S.pk.wash=1;break;
- case 6:S.finished=1}}
+ case 6:{const w=S.w;w.b=[1,1,0];w.a=[2,2,1];const c=S.m.rows.find(r=>r.c);w.far=c?c.c:'unclear';const t='I observed several colour rings in order. This suggests the marker ink is a mixture of dyes, because the dyes dissolve in the water and travel different distances.';PQ.forEach(q=>w[q.k]=w[q.k]||t);w.idea='explaining with evidence';w.ev='Q3';S.finished=1}}}
 /* ===== init ===== */
 setMute(MUTE);render();
 window.__sim={get S(){return S},fillStep,render,hhmm,reset(){S=fresh();HELD=null;render()},load(o){S=o;render()},MARKERS,SIM_S};
