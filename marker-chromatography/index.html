@@ -512,7 +512,7 @@ const NWORDS=6;
 const SK=['Interpret','Link','Evaluate'],LV=[['0','Need help','🆘'],['1','Partly','🌗'],['2','Independently','🚀']];
 const PGN={rec:'1 Record',int:'2 Interpret',bio:'3 Biology',ext:'4 Extension',fin:'5 Finish'};
 const PQ=[
-{k:'a3',n:'Q3',dok:2,pg:'int',t:'What does your result suggest about the ink?',h:'Support your conclusion with two observations from your result.',sup:'I observed ___ and ___. This suggests the ink ___ because ___.'},
+{k:'a3',n:'Q3',dok:3,pg:'int',t:'What does your result suggest about the ink?',h:'Support your conclusion with two observations from your result.',sup:'I observed ___ and ___. This suggests the ink ___ because ___.'},
 {k:'a4',n:'Q4',dok:2,pg:'int',t:'Explain why different dyes can travel different distances through the paper.',h:'',sup:'Use: dissolve in the solvent / attraction to the paper / different distances.'},
 {k:'a5',n:'Q5',dok:3,pg:'int',t:'A student puts the starting ink below the water level. Predict how this affects the result and explain why.',h:'',sup:''},
 {k:'a6',n:'Q6',dok:3,pg:'bio',t:'How does a mixture of pigments help a leaf capture light for photosynthesis?',h:'',sup:'Different pigments absorb ___. This helps the leaf because ___.'},
@@ -729,7 +729,7 @@ function postHTML(){const w=S.w,mk=MK(S.mk)||MARKERS[0];
  const cols=[...new Set(S.m.rows.map(r=>r.c).filter(Boolean))],vis=cols.length?cols.join(', '):'not shown';
  return `<div class="bench" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div class="pn t5 scroll">${wTabs()}<h2>Before you write</h2><p class="qh">Rate each skill. <small>0 = need help, 1 = partly, 2 = independently</small></p>${rateRows('b')}
   <h2><span class="qn">Q1</span> ${dokB(1)}</h2><p class="qh">Marker colour: <b>${esc(mk.t)}</b> · Solvent: <b>water</b></p>
-  <h2><span class="qn">Q2</span> ${dokB(2)}</h2><p class="qh">Your labelled colour pattern is on the right. <br>Visible colours: <b>${esc(vis)}</b></p>
+  <h2><span class="qn">Q2</span> ${dokB(1)}</h2><p class="qh">Your labelled colour pattern is on the right. <br>Visible colours: <b>${esc(vis)}</b></p>
   <label class="lbl" for="far">Which colour travelled furthest from the original ink position?</label><select id="far" data-in="w.far" aria-label="Furthest colour"><option value="">choose</option>${[...cols,'unclear'].map(c=>`<option ${w.far===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
   <div class="pn t1"><h2>Your result</h2><div class="rwrap"><div class="rimg nc nolbl">${I(mk.res,'','Your labelled filter paper')}${S.m.pins.map(p=>pinHTML(p,0).replace('data-a="unpin"','')).join('')}</div></div></div></div>`}
 function packHTML(){const pk=S.pk,left=ITEMS.filter(i=>!pk.done[i.id]);
