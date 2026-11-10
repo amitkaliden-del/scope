@@ -461,6 +461,13 @@ img.co{mix-blend-mode:normal!important;filter:drop-shadow(0 7px 9px #000b) drop-
 .gr .gb.up{background:linear-gradient(90deg,#b8ff3d,#3df0ff);color:#0d0a22;animation:rpop .6s}
 .gr em{font-style:normal;color:#b8ff3d;font-weight:700}
 @media (prefers-reduced-motion:reduce){.rp.on,.gr .gb.up{animation:none}}
+.pgs{display:flex;align-items:center;gap:6px;margin-bottom:4px}.pgs i{width:26px;height:8px;border-radius:99px;background:#3c2f86}
+.pgs i.d{background:#b8ff3d}.pgs i.c{background:linear-gradient(90deg,#9d6bff,#3df0ff);box-shadow:0 0 10px #3df0ff99}
+.pgs span{margin-left:6px;font:700 12px var(--mono);color:var(--mut)}
+#peekbox{position:fixed;inset:0;z-index:90;background:#000b;display:grid;place-items:center;padding:14px}
+#peekbox .pkb{background:#201748;border:2px solid #9d6bff;border-radius:18px;padding:20px 24px;max-width:420px;display:grid;gap:10px;text-align:center;box-shadow:0 0 40px #9d6bff66}
+#peekbox .pkt{display:flex;gap:14px;justify-content:center}#peekbox .pkt span{display:grid;gap:4px;font:700 12px var(--mono);color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+#peekbox .pkt b{font:700 34px var(--mono);color:#b8ff3d;letter-spacing:0}#peekbox p{margin:0;font-size:14px}
 
 </style>
 <div id="app">
@@ -526,14 +533,14 @@ function fresh(){return{v:1,step:-1,max:0,name:'',cls:'10A',gr:'10',let:'A',t0:D
  pledge:[0,0,0,0],mk:null,q1:'',
  P:{ink:0,fold:0,water:0,placed:0,fault:0,t0:null,startMin:null,stopped:0,stopMin:null,dur:null,flat:0},
  view:'lab',m:{kind:'centre',pins:[],rows:[0,1,2,3].map(()=>({c:'',p:''})),ts:'',te:'',q2:'',q3:'',q4:'',chk:[0,0,0,0]},
- pk:{done:{},wash:0},w:{rv:'rec',b:[-1,-1,-1],a:[-1,-1,-1],far:'',a3:'',a4:'',a5:'',a6:'',a7:'',s1:'',s2:'',idea:'',ev:'',sh:{}},finished:0,celeb:0}}
+ pk:{done:{},wash:0},w:{pg:0,b:[-1,-1,-1],a:[-1,-1,-1],far:'',a3:'',a4:'',a5:'',a6:'',a7:'',s1:'',s2:'',idea:'',ev:'',sh:{}},finished:0,celeb:0,peeks:0}}
 let S=fresh(),HELD=null,NOCLICK=0,WASH=null,TK=null,DRG=null,BUSY=0,ANIM={},LASTP={x:innerWidth/2,y:innerHeight/2},LASTN={s:-9,n:0};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const I=(n,c,alt)=>`<img data-i="${n}" class="${(c||'')+(CUT.has(n)?' co':'')}" alt="${alt||''}" draggable="false">`;
 const LT=n=>GLASS(n)?' lt':'';
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function load(){try{const j=localStorage.getItem(KEY);if(j){const o=JSON.parse(j);if(o&&o.v===1){if(o.view==='rec'||o.view==='q')o.view=o.view==='q'?'tab':'lab';if(!o.w)o.w=fresh().w;if(o.P)o.P.pouring=0;return o}}}catch(e){}return null}
+function load(){try{const j=localStorage.getItem(KEY);if(j){const o=JSON.parse(j);if(o&&o.v===1){if(o.view==='rec'||o.view==='q')o.view=o.view==='q'?'tab':'lab';if(!o.w)o.w=fresh().w;if(o.w.pg==null)o.w.pg=0;if(o.peeks==null)o.peeks=0;if(o.P)o.P.pouring=0;return o}}}catch(e){}return null}
 const hhmm=m=>{m=((Math.round(m)%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
 const parseT=s=>{const x=String(s||'').trim().match(/^(\d{1,2})[:.](\d{2})$/);return x?(+x[1])*60+(+x[2]):null};
 const frontP=()=>S.P.placed&&S.P.t0?Math.min(1,(Date.now()-S.P.t0)/(SIM_S*1000)):0;
@@ -585,6 +592,17 @@ const pinOf=k=>S.m.pins.find(p=>p.k===k);
 const labDone=()=>!!(pinOf('centre')&&pinOf('ring')&&S.m.pins.some(p=>p.k==='region'));
 const qDone=()=>words(S.m.q2)>=NWORDS&&words(S.m.q3)>=NWORDS&&words(S.m.q4)>=NWORDS&&S.m.chk.every(x=>x);
 const rowsOK=()=>{const R=S.m.rows;return R.some(r=>r.c&&r.p)&&R.every(r=>(!r.c&&!r.p)||(r.c&&r.p))};
+
+const PGQ=[[],[],['a3','a4','a5'],['a6','a7'],['s1','s2'],[]];
+function wReqs(pg){const w=S.w,R=[];
+ if(pg===0)R.push({l:'Rate your skills (before)',d:w.b.every(x=>x>=0),a:'Rate each skill <b>0, 1 or 2</b> before you write. Then press <b>Next</b>.'});
+ if(pg===1)R.push({l:'Q2: furthest colour',d:!!w.far,a:'<b>Q2</b>: choose the colour that travelled <b>furthest</b>. Then press <b>Next</b>.'});
+ (PGQ[pg]||[]).forEach(k=>{const q=PQ.find(x=>x.k===k);R.push({l:q.n,d:words(w[k])>=NWORDS,a:`Answer <b>${q.n}</b> (${words(w[k])}/${NWORDS} words).`})});
+ if(pg===5){R.push({l:'Rate your skills again',d:w.a.every(x=>x>=0),a:'Rate each skill <b>0, 1 or 2</b> again in the exit ticket.'});
+  R.push({l:'One idea I improved',d:words(w.idea)>=3,a:'Write <b>one idea you improved</b> (3+ words).'});
+  R.push({l:'Evidence question',d:!!w.ev,a:'Choose the question that shows your improvement.'})}
+ return R}
+const allW=()=>[0,1,2,3,4,5].every(p=>wReqs(p).every(x=>x.d));
 function reqs(){const R=[],P=S.P,m=S.m;
  switch(S.step){
  case 0:R.push({l:'Name and class',d:!!S.name.trim(),a:'Type your <b>name</b>. Pick your <b>class</b>.'});
@@ -608,19 +626,13 @@ function reqs(){const R=[],P=S.P,m=S.m;
   R.push({l:'Sort all 3 lab items',d:left===0,a:`Drag each item to the right place, or tap it and then tap the place. <b>${left} left</b>.`});
   R.push({l:'Wash your hands',d:!!S.pk.wash,a:'Press <b>Wash hands (10 s)</b>.'});break}
 
- case 6:{const w=S.w,nw=(v,t)=>w.rv===v?'':`Press <b>${t}</b>. `;
-  R.push({l:'Rate your skills (before)',d:w.b.every(x=>x>=0),a:nw('rec','1 Record')+'Rate each skill <b>0, 1 or 2</b> before you write.'});
-  R.push({l:'Q2: furthest colour',d:!!w.far,a:nw('rec','1 Record')+'<b>Q2</b>: choose the colour that travelled <b>furthest</b>.'});
-  PQ.forEach(q=>R.push({l:q.n,d:words(w[q.k])>=NWORDS,a:nw(q.pg,PGN[q.pg])+`Answer <b>${q.n}</b> (${words(w[q.k])}/${NWORDS} words).`}));
-  R.push({l:'Rate your skills again',d:w.a.every(x=>x>=0),a:nw('fin','5 Finish')+'Rate each skill <b>0, 1 or 2</b> again in the exit ticket.'});
-  R.push({l:'One idea I improved',d:words(w.idea)>=3,a:nw('fin','5 Finish')+'Write <b>one idea you improved</b> (3+ words).'});
-  R.push({l:'Evidence question',d:!!w.ev,a:nw('fin','5 Finish')+'Choose the question that shows your improvement.'});break}}
+ case 6:return wReqs(S.w.pg)}
  return R}
 function todoHTML(){const r=reqs(),n=r.filter(x=>x.d).length,cur=r.find(x=>!x.d);
- const tx=cur?cur.a:(S.step===6?(S.finished?'Lab finished. Your answers are saved with this lab.':'All answered. Press <b>Finish lab</b>.'):'All done here. Press <b>Next</b>.');
+ const tx=cur?cur.a:(S.step===6?(S.finished?'Lab finished. Your answers are saved with this lab.':(S.step===6&&S.w.pg<5?'Page done. Press <b>Next</b>.':'All answered. Press <b>Finish lab</b>.')):'All done here. Press <b>Next</b>.');
  return `<div class="todo"><div class="tl">NEXT</div><div class="tx" id="act">${tx}</div><div class="tp"><b id="cnt">${n}/${r.length}</b><div class="bar"><i style="width:${r.length?n/r.length*100:0}%"></i></div></div></div>`}
 function refreshTodo(){if(S.step<0)return;checkProgress();const t=$('.todo');if(t){const d=document.createElement('div');d.innerHTML=todoHTML();t.replaceWith(d.firstChild)}nudge()}
-function nudge(){const b=$('#bNext');if(b)b.classList.toggle('nudge',S.step>=0&&S.step<6&&!reqs().find(x=>!x.d))}
+function nudge(){const b=$('#bNext');if(b)b.classList.toggle('nudge',S.step>=0&&(S.step<6||S.w.pg<5)&&!reqs().find(x=>!x.d))}
 /* ===== scene pieces ===== */
 function inkBand(){const m=MK(S.mk);if(!m||/^black/.test(m.id))return '';
  return `<polygon points="319,463 440,463 433,501 326,501" fill="#f3f3f0"/><path d="M322 470 Q379 487 436 470 L430 494 Q379 507 328 494 Z" fill="${m.col}" filter="url(#bl)"/>`}
@@ -694,7 +706,7 @@ function tabHTML(mk){const m=S.m;
  const left=`<div class="pn t2 scroll">${tabsHTML()}<h2>Marker: ${esc(mk.t)}</h2>
   <div class="row" style="flex-wrap:nowrap;gap:8px"><div class="field" style="flex:1;min-width:0"><label class="lbl" for="ts">Water start</label><input id="ts" data-in="ts" value="${esc(m.ts)}" placeholder="08:05" inputmode="numeric" autocomplete="off" style="width:100%"></div>
   <div class="field" style="flex:1;min-width:0"><label class="lbl" for="te">Water stop</label><input id="te" data-in="te" value="${esc(m.te)}" placeholder="08:25" inputmode="numeric" autocomplete="off" style="width:100%"></div></div>
-  <div class="rwrap thumb"><div class="rimg nc nolbl">${I(mk.res,'','Your labelled drawing')}${m.pins.map(p=>pinHTML(p,0).replace('data-a="unpin"','')).join('')}</div></div></div>`;
+  <div><button class="btn sm" data-a="peek">👁 Show my times</button></div><div class="rwrap thumb"><div class="rimg nc nolbl">${I(mk.res,'','Your labelled drawing')}${m.pins.map(p=>pinHTML(p,0).replace('data-a="unpin"','')).join('')}</div></div></div>`;
  const right=`<div class="pn t3 scroll"><h2>Colours from the centre outwards</h2><table class="mt"><thead><tr><th>No.</th><th>Colour seen</th><th>Where</th></tr></thead><tbody>${m.rows.map((r,i)=>`<tr><td>${i+1}</td><td><select data-in="rc.${i}" aria-label="Colour ${i+1}"><option value="">choose</option>${COLS.map(c=>`<option ${r.c===c?'selected':''}>${c}</option>`).join('')}</select></td><td><select data-in="rp.${i}" aria-label="Position ${i+1}"><option value="">choose</option>${POS.map(c=>`<option ${r.p===c?'selected':''}>${c}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table>
   <p class="tip" style="margin:0">Show what you see. Write “unclear” if colours overlap. Do not invent results.</p><button class="btn ${timesOK()&&rowsOK()?'pri':''}" data-a="gonext">Next: pack away →</button></div>`;
  return `<div class="bench" style="grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)">${left}${right}</div>`}
@@ -705,33 +717,32 @@ function qHTML(mk){const m=S.m,ck=['Labelled colour drawing','Evidence','Biology
  ${q(4,'What is one limit of this model?','Explain why marker results cannot identify leaf pigments. Suggest an improvement.<small>Support: Use your experiment for Q4.</small>')}
  <div class="pn full t1" style="flex-direction:row;align-items:center;flex-wrap:wrap"><span class="lbl">Self-check</span><div class="sc">${ck.map((t,i)=>`<button class="btn ${m.chk[i]?'on':''}" data-a="chk" data-i="${i}">${m.chk[i]?'✓ ':''}${t}</button>`).join('')}</div><div style="margin-left:auto">${tabsHTML()}</div></div></div>`}
 
-const wTabs=()=>{const w=S.w,ok={rec:w.b.every(x=>x>=0)&&!!w.far,int:PQ.filter(q=>q.pg==='int').every(q=>words(w[q.k])>=NWORDS),bio:PQ.filter(q=>q.pg==='bio').every(q=>words(w[q.k])>=NWORDS),ext:PQ.filter(q=>q.pg==='ext').every(q=>words(w[q.k])>=NWORDS),fin:w.a.every(x=>x>=0)&&words(w.idea)>=3&&!!w.ev};
- return `<div class="subtabs">${Object.keys(PGN).map(v=>`<button class="btn sm ${w.rv===v?'on':''}" data-a="rv" data-v="${v}">${ok[v]?'✓ ':''}${PGN[v]}</button>`).join('')}</div>`};
+const wTabs=()=>`<div class="pgs" aria-label="Page ${S.w.pg+1} of 6">${[0,1,2,3,4,5].map(i=>`<i class="${i<S.w.pg?'d':''} ${i===S.w.pg?'c':''}"></i>`).join('')}<span>Page ${S.w.pg+1} of 6</span></div>`;
 const rateRows=(t)=>SK.map((s,i)=>`<div class="rate"><b>${s}</b><div class="rb">${LV.map(([v,l,e])=>`<button class="rp ${S.w[t][i]===+v?'on':''}" data-a="rate" data-t="${t}" data-i="${i}" data-v="${v}"><span class="re" aria-hidden="true">${e}</span><span class="rn">${v}</span><small>${l}</small></button>`).join('')}</div></div>`).join('');
 const dokB=n=>`<span class="dok" title="Depth of Knowledge level ${n}">DOK ${n}</span>`;
 function pqHTML(q,cls){const w=S.w,sh=w.sh[q.k];
  return `<div class="pn ${cls}"><h2><span class="qn">${q.n}</span> ${q.ext?'<span class="ext">Extension question</span>':''} ${dokB(q.dok)}</h2><p class="qh"><b>${q.t}</b>${q.h?`<small>${q.h}</small>`:''}</p>${q.sup?`<div><button class="btn sm ${sh?'on':''}" data-a="sup" data-k="${q.k}">💡 Support</button></div>${sh?`<div class="supbox">${q.sup}</div>`:''}`:''}<textarea class="ta" data-in="w.${q.k}" aria-label="${q.n}">${esc(w[q.k])}</textarea><div class="stat">${words(w[q.k])} words (need ${NWORDS}+)</div></div>`}
 const refBox=()=>`<div class="pn t1"><h2>Reference</h2><p class="qh">${REFTXT}</p></div>`;
-function postHTML(){const w=S.w,mk=MK(S.mk)||MARKERS[0];
- const tabsRow=`<div class="pn full t1" style="flex-direction:row;align-items:center;flex-wrap:wrap"><span class="lbl">After the investigation</span><div style="margin-left:auto">${wTabs()}</div></div>`;
- if(w.rv==='int')return `<div class="bench qs">${PQ.filter(q=>q.pg==='int').map((q,i)=>pqHTML(q,'t'+[5,3,4][i])).join('')}${tabsRow}</div>`;
- if(w.rv==='bio')return `<div class="bench qs">${PQ.filter(q=>q.pg==='bio').map((q,i)=>pqHTML(q,'t'+[5,3][i])).join('')}${refBox()}${tabsRow}</div>`;
- if(w.rv==='ext')return `<div class="bench qs">${PQ.filter(q=>q.pg==='ext').map((q,i)=>pqHTML(q,'t'+[5,3][i])).join('')}${refBox()}${tabsRow}</div>`;
- if(w.rv==='fin'){const m=S.m,tc=Math.round((Date.now()-S.t0)/60000);
-  const gr=SK.map((s,i)=>{const b=w.b[i],a=w.a[i],d=a>=0&&b>=0?a-b:null;return `<div class="gr"><b>${s}</b><span class="gb">${b<0?'–':b}</span><i class="ga">→</i><span class="gb ${d>0?'up':''}">${a<0?'–':a}</span><em>${d==null?'':d>0?'▲ +'+d:d<0?'▼ '+d:'same'}</em></div>`}).join('');
-  return `<div class="bench" style="grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)"><div class="pn t5 scroll">${wTabs()}<h2>Peer feedback and tidy up</h2><div class="supbox" style="display:block">Swap sheets with a partner. Peer feedback and your improved answer go on your <b>paper sheet</b>.</div><div class="supbox" style="display:block">Tidy up: close the activity when asked. Return shared equipment, clear rubbish and organise your workspace.</div>
+function postHTML(){const w=S.w,mk=MK(S.mk)||MARKERS[0],pg=w.pg;
+ const qp=(ks,ref)=>`<div class="bench qs">${ks.map((k,i)=>pqHTML(PQ.find(q=>q.k===k),'t'+[5,3,4][i]).replace('<div class="pn ','<div class="pn ').replace('</h2>','</h2>'+(i===0?wTabs():''))).join('')}${ref?refBox():''}</div>`;
+ if(pg===0)return `<div class="bench" style="grid-template-columns:minmax(0,1fr)"><div class="pn t5 scroll" style="max-width:760px;margin:0 auto;width:100%">${wTabs()}<h2>Before you write</h2><p class="qh">How confident are you with these skills right now? Be honest. <small>0 = need help, 1 = partly, 2 = independently</small></p>${rateRows('b')}</div></div>`;
+ if(pg===1){const cols=[...new Set(S.m.rows.map(r=>r.c).filter(Boolean))],vis=cols.length?cols.join(', '):'not shown';
+  return `<div class="bench" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div class="pn t5 scroll">${wTabs()}<h2><span class="qn">Q1</span> ${dokB(1)}</h2><p class="qh">Marker colour: <b>${esc(mk.t)}</b> · Solvent: <b>water</b></p>
+  <h2><span class="qn">Q2</span> ${dokB(1)}</h2><p class="qh">Your labelled colour pattern is on the right. <br>Visible colours: <b>${esc(vis)}</b></p>
+  <label class="lbl" for="far">Which colour travelled furthest from the original ink position?</label><select id="far" data-in="w.far" aria-label="Furthest colour"><option value="">choose</option>${[...cols,'unclear'].map(c=>`<option ${w.far===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+  <div class="pn t1"><h2>Your result</h2><div class="rwrap"><div class="rimg nc nolbl">${I(mk.res,'','Your labelled filter paper')}${S.m.pins.map(p=>pinHTML(p,0).replace('data-a="unpin"','')).join('')}</div></div></div></div>`}
+ if(pg===2)return qp(PGQ[2],0);
+ if(pg===3)return qp(PGQ[3],1);
+ if(pg===4)return qp(PGQ[4],1);
+ const m=S.m,tc=Math.round((Date.now()-S.t0)/60000);
+ const gr=SK.map((s,i)=>{const b=w.b[i],a=w.a[i],d=a>=0&&b>=0?a-b:null;return `<div class="gr"><b>${s}</b><span class="gb">${b<0?'–':b}</span><i class="ga">→</i><span class="gb ${d>0?'up':''}">${a<0?'–':a}</span><em>${d==null?'':d>0?'▲ +'+d:d<0?'▼ '+d:'same'}</em></div>`}).join('');
+ return `<div class="bench" style="grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)"><div class="pn t5 scroll">${wTabs()}<h2>Peer feedback and tidy up</h2><div class="supbox" style="display:block">Swap sheets with a partner. Peer feedback and your improved answer go on your <b>paper sheet</b>.</div><div class="supbox" style="display:block">Tidy up: close the activity when asked. Return shared equipment, clear rubbish and organise your workspace.</div>
   <h2>Exit ticket</h2><p class="qh">Rate again. <small>0 = need help, 1 = partly, 2 = independently</small></p>${rateRows('a')}
   <label class="lbl" for="idea">One idea I improved</label><input id="idea" data-in="w.idea" value="${esc(w.idea)}" autocomplete="off" style="width:100%">
   <label class="lbl" for="ev">Evidence of my improvement is in question</label><select id="ev" data-in="w.ev" aria-label="Evidence question"><option value="">choose</option>${PQ.map(q=>`<option ${w.ev===q.n?'selected':''}>${q.n}</option>`).join('')}</select></div>
   <div class="pn t1 scroll"><h2>${esc(S.name||'Student')} · ${S.cls}</h2><p style="margin:0">Marker: <b>${esc(mk.t)}</b> · Water start <b>${esc(m.ts)}</b> · stop <b>${esc(m.te)}</b></p><div class="growth"><h2 style="margin:0">Skill growth</h2>${gr}</div><p class="stat">Time ${tc} min · mistakes ${S.errs}</p>
   <div class="row"><button class="btn" data-a="copy">Copy answers</button>${/github\.io$/.test(location.hostname)?'<button class="btn pri" data-a="print">Print / Save as PDF</button><button class="btn" data-a="dl">Download answers</button>':'<span class="tip">The Print / Save as PDF button appears on the published (github.io) version.</span>'}</div>
   ${S.finished?`<div class="ok-box"><b>Lab finished.</b> Your answers are saved with this lab.</div>`:`<button class="btn pri bigbtn" data-a="finish">Finish lab</button>`}</div></div>`}
- const cols=[...new Set(S.m.rows.map(r=>r.c).filter(Boolean))],vis=cols.length?cols.join(', '):'not shown';
- return `<div class="bench" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)"><div class="pn t5 scroll">${wTabs()}<h2>Before you write</h2><p class="qh">Rate each skill. <small>0 = need help, 1 = partly, 2 = independently</small></p>${rateRows('b')}
-  <h2><span class="qn">Q1</span> ${dokB(1)}</h2><p class="qh">Marker colour: <b>${esc(mk.t)}</b> · Solvent: <b>water</b></p>
-  <h2><span class="qn">Q2</span> ${dokB(1)}</h2><p class="qh">Your labelled colour pattern is on the right. <br>Visible colours: <b>${esc(vis)}</b></p>
-  <label class="lbl" for="far">Which colour travelled furthest from the original ink position?</label><select id="far" data-in="w.far" aria-label="Furthest colour"><option value="">choose</option>${[...cols,'unclear'].map(c=>`<option ${w.far===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
-  <div class="pn t1"><h2>Your result</h2><div class="rwrap"><div class="rimg nc nolbl">${I(mk.res,'','Your labelled filter paper')}${S.m.pins.map(p=>pinHTML(p,0).replace('data-a="unpin"','')).join('')}</div></div></div></div>`}
 function packHTML(){const pk=S.pk,left=ITEMS.filter(i=>!pk.done[i.id]);
  const tile=i=>`<div class="it${LT(i.img)} ${HELD===i.id?'held':''}" data-drag="${i.id}" role="button" tabindex="0" aria-label="${i.t}">${I(i.img,'',i.t)}<span>${i.t}</span></div>`;
  const cnt=k=>ITEMS.filter(i=>i.bin===k&&pk.done[i.id]).length;
@@ -764,7 +775,7 @@ function hydrate(root){(root||document).querySelectorAll('img[data-i]').forEach(
 function render(){const st=S.step;
  $('#steps').innerHTML=st<0?'':STEPS.map((n,i)=>`<div class="chip ${i<st?'done':''} ${i===st?'cur':''}" ${i<=S.max&&i!==st?`data-a="goto" data-i="${i}" role="button" tabindex="0"`:''}><i>${i+1}</i>${n}</div>`).join('');
  const sg=$('#stage');sg.className=st<0?'full':'';sg.innerHTML=(st<0?'':todoHTML())+stageHTML();hydrate(sg);
- $('#bBack').hidden=st<=0;$('#bNext').hidden=st<0||st===6;$('#bar').hidden=st<0;
+ $('#bBack').hidden=st<=0;$('#bNext').hidden=st<0||(st===6&&(S.w.pg>=5||S.celeb));$('#bar').hidden=st<0;
  const dv=$('#dev');dv.hidden=!(S.dev&&st>=0);if(!dv.hidden){const sel=$('#dsel');if(!sel.options.length)STEPS.forEach((n,i)=>sel.add(new Option((i+1)+' '+n,i)))}
  const mg=$('#msg');if(!mg.textContent.trim())mg.textContent=coach();nudge();checkProgress();afterRender()}
 function persist(){save();render()}
@@ -826,8 +837,8 @@ document.addEventListener('click',e=>{
  switch(a){
  case 'start':S.t0=Date.now();S.step=0;say('');persist();track('step');return;
  case 'cont':{const o=load();if(o)S=o;say('');render();return}
- case 'back':if(S.step>0)goStep(S.step-1);return;
- case 'next':if(canNext())goStep(S.step+1);return;
+ case 'back':if(S.step===6&&S.w.pg>0&&!S.celeb){S.w.pg--;say('');sfx('tap');persist();return}if(S.step>0)goStep(S.step-1);return;
+ case 'next':if(S.step===6){if(canNext()){S.w.pg=Math.min(5,S.w.pg+1);say('');sfx('good');persist()}return}if(canNext())goStep(S.step+1);return;
  case 'goto':goStep(+d.i);return;
  case 'putdown':HELD=null;say('');render();return;
  case 'pl':S.pledge[+d.i]=S.pledge[+d.i]?0:1;say('');persist();return;
@@ -844,9 +855,10 @@ document.addEventListener('click',e=>{
  case 'replay':ANIM.bloom=1;sfx('bloom');render();return;
  case 'mute':setMute(!MUTE);if(!MUTE)sfx('pop');return;
  case 'chk':m.chk[+d.i]=m.chk[+d.i]?0:1;persist();return;
- case 'rv':S.w.rv=d.v;say('');sfx('tap');persist();return;
  case 'rate':S.w[d.t][+d.i]=+d.v;sfx('pop');persist();return;
  case 'sup':S.w.sh[d.k]=S.w.sh[d.k]?0:1;sfx('tap');persist();return;
+ case 'peek':{S.peeks=(S.peeks||0)+1;persist();const P=S.P,o=document.createElement('div');o.id='peekbox';o.innerHTML=`<div class="pkb"><h2>Your water times</h2><div class="pkt"><span>Water start<b>${hhmm(P.startMin)}</b></span><span>Water stop<b>${hhmm(P.stopMin)}</b></span></div><p>Type these in the boxes. Using this hint is recorded in your report.</p><button class="btn pri" data-a="peekx">Close</button></div>`;document.body.appendChild(o);return}
+ case 'peekx':{const o=$('#peekbox');if(o)o.remove();return}
  case 'gonext':if(canNext())goStep(S.step+1);return;
  case 'ref':{const r=$('#ref');r.hidden=false;hydrate(r);return}
  case 'refx':$('#ref').hidden=true;return;
@@ -855,7 +867,7 @@ document.addEventListener('click',e=>{
  case 'copy':copyAns();return;
  case 'print':buildPrint();try{window.print()}catch(x){}return;
  case 'dl':try{const bl=new Blob([ansText()],{type:'text/plain'}),u=URL.createObjectURL(bl),a2=document.createElement('a');a2.href=u;a2.download='colour-detectives-results.txt';a2.click()}catch(x){}return;
- case 'finish':{const u=reqs().find(x=>!x.d);if(u){bad('Not yet: '+u.l+'.');return}}S.finished=1;S.celeb=1;sfx('done');persist();track('done',{report:reportHTML()});return;
+ case 'finish':{const u=reqs().find(x=>!x.d);if(u){bad('Not yet: '+u.l+'.');return}if(!allW()){bad('Some earlier pages are not finished. Press Back to check them.');return}}S.finished=1;S.celeb=1;sfx('done');persist();track('done',{report:reportHTML()});return;
  case 'back2res':S.celeb=0;persist();return;
  case 'dgo':{const t=+$('#dsel').value;for(let i=0;i<t;i++)fillStep(i);S.step=t;if(t>S.max)S.max=t;HELD=null;if(t<6)S.finished=0;persist();say('Developer: jumped to '+STEPS[t]+'.');$('#dsel').value=t;return}
  case 'dfill':fillStep(S.step);persist();say('Developer: step filled.');return;
@@ -867,12 +879,12 @@ document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset
  else if(k==='q1')S.q1=v;else if(k.startsWith('w.'))S.w[k.slice(2)]=v;else if(k==='q2'||k==='q3'||k==='q4')m[k]=v;else if(k==='ts'||k==='te')m[k]=v;
  else if(k.startsWith('rc.')||k.startsWith('rp.')){const i=+k.split('.')[1];m.rows[i][k[1]==='c'?'c':'p']=v;
   if(k[1]==='c'&&v&&v!=='unclear'){const mk=MK(S.mk);if(mk&&!mk.known.includes(v))say('Look at your picture again. Do you really see '+v+'? Write “unclear” if you are not sure.')}}
- save();if(S.step===4&&(k==='ts'||k==='te')){const msg=$('#msg');if(msg&&parseT(v)!=null&&S.P.startMin!=null&&k==='ts'&&Math.abs(parseT(v)-S.P.startMin)>1)say('Check the clock in the Run step for your start time.')}
+ save();if(S.step===4&&(k==='ts'||k==='te')&&parseT(v)!=null){const tg=k==='ts'?S.P.startMin:S.P.stopMin;if(tg!=null&&Math.abs(parseT(v)-tg)>1)say('Check the '+(k==='ts'?'start':'stop')+' time in the Run step, or press Show my times.')}
  refreshTodo()});
 document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.in;if(k&&S.step>=0){save();refreshTodo()}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#ref').hidden)$('#ref').hidden=true;if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.chip[data-a],.mkc,.bn,.it[data-drag]')){e.preventDefault();e.target.click()}});
 /* ===== answers, print, report ===== */
-function ansText(){const m=S.m,mk=MK(S.mk)||{t:''};return `${TITLE}\n${S.name} (${S.cls})\nMarker: ${mk.t}\nWater start: ${m.ts}  Stop: ${m.te}\nPrediction: ${S.q1}\nColours (centre outwards): ${rowsTxt().join('; ')}\nLabels: ${labelsTxt()}\nSkills before: ${SK.map((s,i)=>s+' '+S.w.b[i]).join(', ')}\nQ2 Furthest colour: ${S.w.far}\n${PQ.map(q=>q.n+' (DOK '+q.dok+') '+q.t+'\\n'+S.w[q.k]).join('\\n')}\nSkills after: ${SK.map((s,i)=>s+' '+S.w.a[i]).join(', ')}\nOne idea I improved: ${S.w.idea} (evidence in ${S.w.ev})\n`}
+function ansText(){const m=S.m,mk=MK(S.mk)||{t:''};return `${TITLE}\n${S.name} (${S.cls})\nMarker: ${mk.t}\nWater start: ${m.ts}  Stop: ${m.te}\nPrediction: ${S.q1}\nColours (centre outwards): ${rowsTxt().join('; ')}\nLabels: ${labelsTxt()}\nSkills before: ${SK.map((s,i)=>s+' '+S.w.b[i]).join(', ')}\nQ2 Furthest colour: ${S.w.far}\n${PQ.map(q=>q.n+' (DOK '+q.dok+') '+q.t+'\\n'+S.w[q.k]).join('\\n')}\nTime hint used: ${S.peeks||0}\nSkills after: ${SK.map((s,i)=>s+' '+S.w.a[i]).join(', ')}\nOne idea I improved: ${S.w.idea} (evidence in ${S.w.ev})\n`}
 function labelsTxt(){const rg=S.m.pins.filter(p=>p.k==='region');const f=p=>`(${Math.round(p.x*100)}% across, ${Math.round(p.y*100)}% down)`;const c=pinOf('centre'),r=pinOf('ring');return [c?'Centre '+f(c):'',r?'Original ink circle '+f(r):'',...rg.map((p,i)=>'Colour region '+(i+1)+' '+f(p))].filter(Boolean).join('; ')}
 function copyAns(){const t=ansText(),fb=()=>{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');say('Answers copied.',false,true)}catch(x){bad('Select and copy the text manually.')}ta.remove()};
  try{navigator.clipboard.writeText(t).then(()=>say('Answers copied.',false,true),fb)}catch(x){fb()}}
@@ -888,7 +900,7 @@ function buildPrint(noimg){const m=S.m,mk=MK(S.mk)||{t:'',res:''},d=new Date().t
  <h2>After the investigation</h2><p><b>Skills before:</b> ${SK.map((s,i)=>s+' '+S.w.b[i]).join(' &nbsp; ')}</p>
  <p><b>Q1</b> Marker colour: ${esc(mk.t)} &nbsp; Solvent: water</p><p><b>Q2</b> Visible colours: ${esc(rowsTxt().join('; ')||'not shown')} &nbsp; Furthest: ${esc(S.w.far)}</p>
  ${PQ.map(q=>`<h2>${q.n}${q.ext?' (extension)':''} · DOK ${q.dok}</h2><p class="ps">${q.t}</p><div class="ans">${esc(S.w[q.k])}</div>`).join('')}
- <p><b>Skills after:</b> ${SK.map((s,i)=>s+' '+S.w.a[i]).join(' &nbsp; ')}</p><p><b>One idea I improved:</b> ${esc(S.w.idea)} &nbsp; <b>Evidence in:</b> ${esc(S.w.ev)}</p>
+ <p><b>Time hint used:</b> ${S.peeks||0}</p><p><b>Skills after:</b> ${SK.map((s,i)=>s+' '+S.w.a[i]).join(' &nbsp; ')}</p><p><b>One idea I improved:</b> ${esc(S.w.idea)} &nbsp; <b>Evidence in:</b> ${esc(S.w.ev)}</p>
  <p class="ps">Result pictures are illustrations. Results vary by marker and brand.</p>`}
 window.addEventListener('beforeprint',()=>{if(S.step===6)buildPrint()});
 /* ===== developer fill ===== */
@@ -901,7 +913,7 @@ function fillStep(n){const P=S.P,m=S.m;
  case 4:{const k=MK(S.mk).known;m.ts=hhmm(P.startMin);m.te=hhmm(P.stopMin);m.pins=[{k:'centre',x:.5,y:.5},{k:'ring',x:.58,y:.5},{k:'region',x:.7,y:.5},{k:'region',x:.8,y:.5}];pinsSorted();
   m.rows=[0,1,2,3].map(i=>({c:k[i]||'',p:k[i]?POS[Math.min(2,i)]:''}));m.q2=m.q2||'I observed several colour rings. This suggests the marker ink is a mixture of dyes.';m.q3=m.q3||'The model shows a mixture separating. Leaves have different pigments that absorb different light, so more light is captured.';m.q4=m.q4||'We tested marker ink, not leaf material, so we cannot identify leaf pigments. Repeating the test would help.';m.chk=[1,1,1,1];break}
  case 5:ITEMS.forEach(i=>S.pk.done[i.id]=1);S.pk.wash=1;break;
- case 6:{const w=S.w;w.b=[1,1,0];w.a=[2,2,1];const c=S.m.rows.find(r=>r.c);w.far=c?c.c:'unclear';const t='I observed several colour rings in order. This suggests the marker ink is a mixture of dyes, because the dyes dissolve in the water and travel different distances.';PQ.forEach(q=>w[q.k]=w[q.k]||t);w.idea='explaining with evidence';w.ev='Q3';S.finished=1}}}
+ case 6:{const w=S.w;w.b=[1,1,0];w.a=[2,2,1];const c=S.m.rows.find(r=>r.c);w.far=c?c.c:'unclear';const t='I observed several colour rings in order. This suggests the marker ink is a mixture of dyes, because the dyes dissolve in the water and travel different distances.';PQ.forEach(q=>w[q.k]=w[q.k]||t);w.idea='explaining with evidence';w.ev='Q3';w.pg=5;S.finished=1}}}
 /* ===== init ===== */
 setMute(MUTE);render();
 window.__sim={get S(){return S},fillStep,render,hhmm,reset(){S=fresh();HELD=null;render()},load(o){S=o;render()},MARKERS,SIM_S};
