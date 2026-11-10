@@ -593,7 +593,7 @@ const labDone=()=>!!(pinOf('centre')&&pinOf('ring')&&S.m.pins.some(p=>p.k==='reg
 const qDone=()=>words(S.m.q2)>=NWORDS&&words(S.m.q3)>=NWORDS&&words(S.m.q4)>=NWORDS&&S.m.chk.every(x=>x);
 const rowsOK=()=>{const R=S.m.rows;return R.some(r=>r.c&&r.p)&&R.every(r=>(!r.c&&!r.p)||(r.c&&r.p))};
 
-const PGQ=[[],[],['a3','a4','a5'],['a6','a7'],['s1','s2'],[]];
+const PGQ=[[],[],['a3','a4','a5'],['a6','a7'],['s1','s2'],[],[]];
 function wReqs(pg){const w=S.w,R=[];
  if(pg===0)R.push({l:'Rate your skills (before)',d:w.b.every(x=>x>=0),a:'Rate each skill <b>0, 1 or 2</b> before you write. Then press <b>Next</b>.'});
  if(pg===1)R.push({l:'Q2: furthest colour',d:!!w.far,a:'<b>Q2</b>: choose the colour that travelled <b>furthest</b>. Then press <b>Next</b>.'});
@@ -602,7 +602,7 @@ function wReqs(pg){const w=S.w,R=[];
   R.push({l:'One idea I improved',d:words(w.idea)>=3,a:'Write <b>one idea you improved</b> (3+ words).'});
   R.push({l:'Evidence question',d:!!w.ev,a:'Choose the question that shows your improvement.'})}
  return R}
-const allW=()=>[0,1,2,3,4,5].every(p=>wReqs(p).every(x=>x.d));
+const allW=()=>[0,1,2,3,4,5,6].every(p=>wReqs(p).every(x=>x.d));
 function reqs(){const R=[],P=S.P,m=S.m;
  switch(S.step){
  case 0:R.push({l:'Name and class',d:!!S.name.trim(),a:'Type your <b>name</b>. Pick your <b>class</b>.'});
@@ -629,10 +629,10 @@ function reqs(){const R=[],P=S.P,m=S.m;
  case 6:return wReqs(S.w.pg)}
  return R}
 function todoHTML(){const r=reqs(),n=r.filter(x=>x.d).length,cur=r.find(x=>!x.d);
- const tx=cur?cur.a:(S.step===6?(S.finished?'Lab finished. Your answers are saved with this lab.':(S.step===6&&S.w.pg<5?'Page done. Press <b>Next</b>.':'All answered. Press <b>Finish lab</b>.')):'All done here. Press <b>Next</b>.');
+ const tx=cur?cur.a:(S.step===6?(S.finished?'Lab finished. Your answers are saved with this lab.':(S.step===6&&S.w.pg<6?'Page done. Press <b>Next</b>.':'All answered. Press <b>Finish lab</b> to see your celebration.')):'All done here. Press <b>Next</b>.');
  return `<div class="todo"><div class="tl">NEXT</div><div class="tx" id="act">${tx}</div><div class="tp"><b id="cnt">${n}/${r.length}</b><div class="bar"><i style="width:${r.length?n/r.length*100:0}%"></i></div></div></div>`}
 function refreshTodo(){if(S.step<0)return;checkProgress();const t=$('.todo');if(t){const d=document.createElement('div');d.innerHTML=todoHTML();t.replaceWith(d.firstChild)}nudge()}
-function nudge(){const b=$('#bNext');if(b)b.classList.toggle('nudge',S.step>=0&&(S.step<6||S.w.pg<5)&&!reqs().find(x=>!x.d))}
+function nudge(){const b=$('#bNext');if(b)b.classList.toggle('nudge',S.step>=0&&(S.step<6||S.w.pg<6)&&!reqs().find(x=>!x.d))}
 /* ===== scene pieces ===== */
 function inkBand(){const m=MK(S.mk);if(!m||/^black/.test(m.id))return '';
  return `<polygon points="319,463 440,463 433,501 326,501" fill="#f3f3f0"/><path d="M322 470 Q379 487 436 470 L430 494 Q379 507 328 494 Z" fill="${m.col}" filter="url(#bl)"/>`}
@@ -717,7 +717,7 @@ function qHTML(mk){const m=S.m,ck=['Labelled colour drawing','Evidence','Biology
  ${q(4,'What is one limit of this model?','Explain why marker results cannot identify leaf pigments. Suggest an improvement.<small>Support: Use your experiment for Q4.</small>')}
  <div class="pn full t1" style="flex-direction:row;align-items:center;flex-wrap:wrap"><span class="lbl">Self-check</span><div class="sc">${ck.map((t,i)=>`<button class="btn ${m.chk[i]?'on':''}" data-a="chk" data-i="${i}">${m.chk[i]?'✓ ':''}${t}</button>`).join('')}</div><div style="margin-left:auto">${tabsHTML()}</div></div></div>`}
 
-const wTabs=()=>`<div class="pgs" aria-label="Page ${S.w.pg+1} of 6">${[0,1,2,3,4,5].map(i=>`<i class="${i<S.w.pg?'d':''} ${i===S.w.pg?'c':''}"></i>`).join('')}<span>Page ${S.w.pg+1} of 6</span></div>`;
+const wTabs=()=>`<div class="pgs" aria-label="Page ${S.w.pg+1} of 7">${[0,1,2,3,4,5,6].map(i=>`<i class="${i<S.w.pg?'d':''} ${i===S.w.pg?'c':''}"></i>`).join('')}<span>Page ${S.w.pg+1} of 7</span></div>`;
 const rateRows=(t)=>SK.map((s,i)=>`<div class="rate"><b>${s}</b><div class="rb">${LV.map(([v,l,e])=>`<button class="rp ${S.w[t][i]===+v?'on':''}" data-a="rate" data-t="${t}" data-i="${i}" data-v="${v}"><span class="re" aria-hidden="true">${e}</span><span class="rn">${v}</span><small>${l}</small></button>`).join('')}</div></div>`).join('');
 const dokB=n=>`<span class="dok" title="Depth of Knowledge level ${n}">DOK ${n}</span>`;
 function pqHTML(q,cls){const w=S.w,sh=w.sh[q.k];
@@ -734,13 +734,13 @@ function postHTML(){const w=S.w,mk=MK(S.mk)||MARKERS[0],pg=w.pg;
  if(pg===2)return qp(PGQ[2],0);
  if(pg===3)return qp(PGQ[3],1);
  if(pg===4)return qp(PGQ[4],1);
- const m=S.m,tc=Math.round((Date.now()-S.t0)/60000);
- const gr=SK.map((s,i)=>{const b=w.b[i],a=w.a[i],d=a>=0&&b>=0?a-b:null;return `<div class="gr"><b>${s}</b><span class="gb">${b<0?'–':b}</span><i class="ga">→</i><span class="gb ${d>0?'up':''}">${a<0?'–':a}</span><em>${d==null?'':d>0?'▲ +'+d:d<0?'▼ '+d:'same'}</em></div>`}).join('');
- return `<div class="bench" style="grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)"><div class="pn t5 scroll">${wTabs()}<h2>Peer feedback and tidy up</h2><div class="supbox" style="display:block">Swap sheets with a partner. Peer feedback and your improved answer go on your <b>paper sheet</b>.</div><div class="supbox" style="display:block">Tidy up: close the activity when asked. Return shared equipment, clear rubbish and organise your workspace.</div>
+ if(pg===5)return `<div class="bench" style="grid-template-columns:minmax(0,1fr)"><div class="pn t5 scroll" style="max-width:760px;margin:0 auto;width:100%">${wTabs()}<h2>Peer feedback and tidy up</h2><div class="supbox" style="display:block">Swap sheets with a partner. Peer feedback and your improved answer go on your <b>paper sheet</b>.</div><div class="supbox" style="display:block">Tidy up: close the activity when asked. Return shared equipment, clear rubbish and organise your workspace.</div>
   <h2>Exit ticket</h2><p class="qh">Rate again. <small>0 = need help, 1 = partly, 2 = independently</small></p>${rateRows('a')}
   <label class="lbl" for="idea">One idea I improved</label><input id="idea" data-in="w.idea" value="${esc(w.idea)}" autocomplete="off" style="width:100%">
-  <label class="lbl" for="ev">Evidence of my improvement is in question</label><select id="ev" data-in="w.ev" aria-label="Evidence question"><option value="">choose</option>${PQ.map(q=>`<option ${w.ev===q.n?'selected':''}>${q.n}</option>`).join('')}</select></div>
-  <div class="pn t1 scroll"><h2>${esc(S.name||'Student')} · ${S.cls}</h2><p style="margin:0">Marker: <b>${esc(mk.t)}</b> · Water start <b>${esc(m.ts)}</b> · stop <b>${esc(m.te)}</b></p><div class="growth"><h2 style="margin:0">Skill growth</h2>${gr}</div><p class="stat">Time ${tc} min · mistakes ${S.errs}</p>
+  <label class="lbl" for="ev">Evidence of my improvement is in question</label><select id="ev" data-in="w.ev" aria-label="Evidence question"><option value="">choose</option>${PQ.map(q=>`<option ${w.ev===q.n?'selected':''}>${q.n}</option>`).join('')}</select></div></div>`;
+ const m=S.m,tc=Math.round((Date.now()-S.t0)/60000);
+ const gr=SK.map((s,i)=>{const b=w.b[i],a=w.a[i],d=a>=0&&b>=0?a-b:null;return `<div class="gr"><b>${s}</b><span class="gb">${b<0?'–':b}</span><i class="ga">→</i><span class="gb ${d>0?'up':''}">${a<0?'–':a}</span><em>${d==null?'':d>0?'▲ +'+d:d<0?'▼ '+d:'same'}</em></div>`}).join('');
+ return `<div class="bench" style="grid-template-columns:minmax(0,1fr)"><div class="pn t1 scroll" style="max-width:760px;margin:0 auto;width:100%">${wTabs()}<h2>${esc(S.name||'Student')} · ${S.cls}</h2><p style="margin:0">Marker: <b>${esc(mk.t)}</b> · Water start <b>${esc(m.ts)}</b> · stop <b>${esc(m.te)}</b></p><div class="growth"><h2 style="margin:0">Skill growth</h2>${gr}</div><p class="stat">Time ${tc} min · mistakes ${S.errs}</p>
   <div class="row"><button class="btn" data-a="copy">Copy answers</button>${/github\.io$/.test(location.hostname)?'<button class="btn pri" data-a="print">Print / Save as PDF</button><button class="btn" data-a="dl">Download answers</button>':'<span class="tip">The Print / Save as PDF button appears on the published (github.io) version.</span>'}</div>
   ${S.finished?`<div class="ok-box"><b>Lab finished.</b> Your answers are saved with this lab.</div>`:`<button class="btn pri bigbtn" data-a="finish">Finish lab</button>`}</div></div>`}
 function packHTML(){const pk=S.pk,left=ITEMS.filter(i=>!pk.done[i.id]);
@@ -775,7 +775,7 @@ function hydrate(root){(root||document).querySelectorAll('img[data-i]').forEach(
 function render(){const st=S.step;
  $('#steps').innerHTML=st<0?'':STEPS.map((n,i)=>`<div class="chip ${i<st?'done':''} ${i===st?'cur':''}" ${i<=S.max&&i!==st?`data-a="goto" data-i="${i}" role="button" tabindex="0"`:''}><i>${i+1}</i>${n}</div>`).join('');
  const sg=$('#stage');sg.className=st<0?'full':'';sg.innerHTML=(st<0?'':todoHTML())+stageHTML();hydrate(sg);
- $('#bBack').hidden=st<=0;$('#bNext').hidden=st<0||(st===6&&(S.w.pg>=5||S.celeb));$('#bar').hidden=st<0;
+ $('#bBack').hidden=st<=0;$('#bNext').hidden=st<0||(st===6&&(S.w.pg>=6||S.celeb));$('#bar').hidden=st<0;
  const dv=$('#dev');dv.hidden=!(S.dev&&st>=0);if(!dv.hidden){const sel=$('#dsel');if(!sel.options.length)STEPS.forEach((n,i)=>sel.add(new Option((i+1)+' '+n,i)))}
  const mg=$('#msg');if(!mg.textContent.trim())mg.textContent=coach();nudge();checkProgress();afterRender()}
 function persist(){save();render()}
@@ -838,7 +838,7 @@ document.addEventListener('click',e=>{
  case 'start':S.t0=Date.now();S.step=0;say('');persist();track('step');return;
  case 'cont':{const o=load();if(o)S=o;say('');render();return}
  case 'back':if(S.step===6&&S.w.pg>0&&!S.celeb){S.w.pg--;say('');sfx('tap');persist();return}if(S.step>0)goStep(S.step-1);return;
- case 'next':if(S.step===6){if(canNext()){S.w.pg=Math.min(5,S.w.pg+1);say('');sfx('good');persist()}return}if(canNext())goStep(S.step+1);return;
+ case 'next':if(S.step===6){if(canNext()){S.w.pg=Math.min(6,S.w.pg+1);say('');sfx('good');persist()}return}if(canNext())goStep(S.step+1);return;
  case 'goto':goStep(+d.i);return;
  case 'putdown':HELD=null;say('');render();return;
  case 'pl':S.pledge[+d.i]=S.pledge[+d.i]?0:1;say('');persist();return;
@@ -913,7 +913,7 @@ function fillStep(n){const P=S.P,m=S.m;
  case 4:{const k=MK(S.mk).known;m.ts=hhmm(P.startMin);m.te=hhmm(P.stopMin);m.pins=[{k:'centre',x:.5,y:.5},{k:'ring',x:.58,y:.5},{k:'region',x:.7,y:.5},{k:'region',x:.8,y:.5}];pinsSorted();
   m.rows=[0,1,2,3].map(i=>({c:k[i]||'',p:k[i]?POS[Math.min(2,i)]:''}));m.q2=m.q2||'I observed several colour rings. This suggests the marker ink is a mixture of dyes.';m.q3=m.q3||'The model shows a mixture separating. Leaves have different pigments that absorb different light, so more light is captured.';m.q4=m.q4||'We tested marker ink, not leaf material, so we cannot identify leaf pigments. Repeating the test would help.';m.chk=[1,1,1,1];break}
  case 5:ITEMS.forEach(i=>S.pk.done[i.id]=1);S.pk.wash=1;break;
- case 6:{const w=S.w;w.b=[1,1,0];w.a=[2,2,1];const c=S.m.rows.find(r=>r.c);w.far=c?c.c:'unclear';const t='I observed several colour rings in order. This suggests the marker ink is a mixture of dyes, because the dyes dissolve in the water and travel different distances.';PQ.forEach(q=>w[q.k]=w[q.k]||t);w.idea='explaining with evidence';w.ev='Q3';w.pg=5;S.finished=1}}}
+ case 6:{const w=S.w;w.b=[1,1,0];w.a=[2,2,1];const c=S.m.rows.find(r=>r.c);w.far=c?c.c:'unclear';const t='I observed several colour rings in order. This suggests the marker ink is a mixture of dyes, because the dyes dissolve in the water and travel different distances.';PQ.forEach(q=>w[q.k]=w[q.k]||t);w.idea='explaining with evidence';w.ev='Q3';w.pg=6;S.finished=1}}}
 /* ===== init ===== */
 setMute(MUTE);render();
 window.__sim={get S(){return S},fillStep,render,hhmm,reset(){S=fresh();HELD=null;render()},load(o){S=o;render()},MARKERS,SIM_S};
