@@ -427,6 +427,24 @@ img.co{mix-blend-mode:normal!important;filter:drop-shadow(0 7px 9px #000b) drop-
 .fig .fwrap>img{width:100%;height:100%;object-fit:contain}
 .rimg.big .pin b,.pin b{width:clamp(18px,calc(min(100cqw,100cqh)*.052),34px);height:clamp(18px,calc(min(100cqw,100cqh)*.052),34px);font-size:clamp(10px,calc(min(100cqw,100cqh)*.024),15px)}
 
+.itemlist .it{background:var(--tile)!important;color:var(--tileink)!important}
+.itemlist .it img{mix-blend-mode:normal}
+.wsvg{width:min(100%,300px);height:auto;flex:none}
+.wsvg .wat{opacity:.25}.wsvg .foam{opacity:0}
+.hands.washing .wat{opacity:1;animation:wflow .5s linear infinite}
+.hands.washing .hl{animation:rubl .45s ease-in-out infinite alternate}
+.hands.washing .hr{animation:rubr .45s ease-in-out infinite alternate}
+.hands.washing .foam{opacity:1}
+.hands.washing .foam circle{animation:fpop 1s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.hands.washing .foam circle:nth-child(2n){animation-delay:.3s}.hands.washing .foam circle:nth-child(3n){animation-delay:.6s}
+.hands.clean .wsvg .hl,.hands.clean .wsvg .hr{transform:none}
+@keyframes wflow{to{stroke-dashoffset:-34}}
+@keyframes rubl{from{transform:translate(-10px,2px)}to{transform:translate(12px,-3px)}}
+@keyframes rubr{from{transform:translate(10px,-2px)}to{transform:translate(-12px,3px)}}
+@keyframes fpop{0%,100%{transform:scale(.6);opacity:.6}50%{transform:scale(1.25);opacity:1}}
+.hands .hh{display:none}
+@media (prefers-reduced-motion:reduce){.hands.washing .wat,.hands.washing .hl,.hands.washing .hr,.hands.washing .foam circle{animation:none!important}}
+
 </style>
 <div id="app">
   <div id="hdr"><div class="brand"><i></i><span>Colour Detectives</span></div><div id="steps"></div><button id="mute" class="btn sm" data-a="mute" aria-label="Sound on or off" aria-pressed="false">🔊</button></div>
@@ -662,7 +680,7 @@ function packHTML(){const pk=S.pk,left=ITEMS.filter(i=>!pk.done[i.id]);
  return `<div class="bench" style="grid-template-columns:minmax(200px,300px) minmax(0,1fr) minmax(170px,230px)">
  <div class="pn t2"><h2>Lab items · ${left.length} left</h2><div class="itemlist" style="grid-template-columns:1fr">${left.map(tile).join('')}</div></div>
  <div class="pn t1"><h2>Where does it go?</h2><div class="bins2">${Object.entries(BINDEF).map(([k,b])=>`<div class="bn" data-drop="bin:${k}" role="button" tabindex="0">${I(b.img,'',b.t)}<span>${b.t}</span>${cnt(k)?`<b class="cnt">${cnt(k)}</b>`:''}</div>`).join('')}</div></div>
- <div class="pn t3"><h2>You</h2><div class="fig hands ${pk.wash?'clean':''}" id="hands" style="flex-direction:column;gap:6px;text-align:center;padding:10px">${bub}<span class="hh" style="font-size:54px" aria-hidden="true">🧼</span><b>${pk.wash?'Clean hands!':'Sort all 3 items first. Then wash your hands for 10 seconds.'}</b></div><button class="btn ${!left.length?'pri':'dis'}" data-a="wash" id="washB">${pk.wash?'✓ Hands washed':'Wash hands (10 s)'}</button></div></div>`}
+ <div class="pn t3"><h2>You</h2><div class="fig hands ${pk.wash?'clean':''}" id="hands" style="flex-direction:column;gap:6px;text-align:center;padding:10px">${bub}<svg class="wsvg" viewBox="0 0 200 150" aria-hidden="true"><rect x="64" y="6" width="72" height="12" rx="6" fill="#9aa6d6"/><rect x="92" y="16" width="16" height="20" rx="4" fill="#b7c1ea"/><line class="wat" x1="100" y1="38" x2="100" y2="92" stroke="#6fe0ff" stroke-width="7" stroke-linecap="round" stroke-dasharray="9 8"/><g class="hl"><rect x="40" y="86" width="86" height="30" rx="15" fill="#f1bd94"/><rect x="108" y="90" width="38" height="9" rx="4.5" fill="#f1bd94"/><rect x="108" y="100" width="40" height="9" rx="4.5" fill="#e9b186"/></g><g class="hr"><rect x="74" y="92" width="86" height="30" rx="15" fill="#f7cfae"/><rect x="54" y="96" width="38" height="9" rx="4.5" fill="#f7cfae"/><rect x="52" y="106" width="40" height="9" rx="4.5" fill="#efc09b"/></g><g class="foam"><circle cx="70" cy="96" r="7" fill="#fff"/><circle cx="104" cy="84" r="9" fill="#e9f7ff"/><circle cx="132" cy="100" r="7" fill="#fff"/><circle cx="90" cy="118" r="8" fill="#e9f7ff"/><circle cx="118" cy="120" r="6" fill="#fff"/><circle cx="58" cy="112" r="6" fill="#e9f7ff"/></g></svg><span class="hh" style="font-size:26px" aria-hidden="true">🧼</span><b>${pk.wash?'Clean hands!':'Sort all 3 items first. Then wash your hands for 10 seconds.'}</b></div><button class="btn ${!left.length?'pri':'dis'}" data-a="wash" id="washB">${pk.wash?'✓ Hands washed':'Wash hands (10 s)'}</button></div></div>`}
 function rowsTxt(){return S.m.rows.map((r,i)=>r.c||r.p?`${i+1}. ${r.c||'—'} (${r.p||'—'})`:'').filter(Boolean)}
 function resultsHTML(){const m=S.m,mk=MK(S.mk)||MARKERS[0],tc=Math.round((Date.now()-S.t0)/60000);
  return `<div class="bench" style="grid-template-columns:minmax(0,1.4fr) minmax(220px,.8fr)"><div class="pn t5 scroll"><h2>${esc(S.name||'Student')} · ${S.cls}</h2>
@@ -769,7 +787,7 @@ document.addEventListener('click',e=>{
  case 'chk':m.chk[+d.i]=m.chk[+d.i]?0:1;persist();return;
  case 'ref':{const r=$('#ref');r.hidden=false;hydrate(r);return}
  case 'refx':$('#ref').hidden=true;return;
- case 'wash':if(!ITEMS.every(i=>S.pk.done[i.id])){bad('Sort the lab items first.');return}if(S.pk.wash||WASH)return;{let n=10;const b=$('#washB');b.textContent='Washing… '+n;const h=$('#hands');if(h)h.classList.add('washing');sfx('wash');
+ case 'wash':if(!ITEMS.every(i=>S.pk.done[i.id])){bad('Sort the lab items first.');return}if(S.pk.wash||WASH)return;{let n=10;const b=$('#washB');b.textContent='Washing… '+n;const h=$('#hands');if(h){h.classList.add('washing');const bt=h.querySelector('b');if(bt)bt.textContent='Rub palms, backs of hands and between your fingers.'}sfx('wash');
   WASH=setInterval(()=>{n--;const x=$('#washB');if(x)x.textContent='Washing… '+n;if(n>0)sfx('wash');if(n<=0){clearInterval(WASH);WASH=null;S.pk.wash=1;sfx('good');persist()}},1000)}return;
  case 'copy':copyAns();return;
  case 'print':buildPrint();try{window.print()}catch(x){}return;
