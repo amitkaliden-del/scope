@@ -582,7 +582,7 @@ document.addEventListener('pointerdown',e=>{LASTP={x:e.clientX,y:e.clientY}},tru
 function track(kind,extra){
  if(!API||!S.name||!S.name.trim()||S.step<0)return;
  let pg=0,pm=0;try{const r=reqs();pm=r.length;pg=r.filter(x=>x.d).length}catch(e){}
- const p=Object.assign({k:kind,id:S.cls+'|'+S.name.trim().toLowerCase().replace(/\s+/g,' ').slice(0,30),name:S.name.trim(),sid:'',cls:S.cls,step:S.step,stepName:STEPS[S.step],done:!!S.finished,t0:S.t0,prog:pg,progMax:pm,errs:S.errs||0,adv:0,ts:Date.now()},extra||{});
+ const p=Object.assign({k:kind,sim:'marker-chromatography',simTitle:'Colour Detectives Lab (marker ink)',steps:STEPS,id:S.cls+'|'+S.name.trim().toLowerCase().replace(/\s+/g,' ').slice(0,30),name:S.name.trim(),sid:'',cls:S.cls,step:S.step,stepName:STEPS[S.step],done:!!S.finished,t0:S.t0,prog:pg,progMax:pm,errs:S.errs||0,adv:0,ts:Date.now()},extra||{});
  try{fetch(API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(p),keepalive:kind!=='done'}).catch(()=>{})}catch(e){}}
 if(API)setInterval(()=>{if(!document.hidden)track('beat')},20000);
 function reportHTML(){buildPrint(1);return $('#prt').innerHTML.replace(/<svg[\s\S]*?<\/svg>/g,'').replace(/<img[^>]*>/g,'')}
