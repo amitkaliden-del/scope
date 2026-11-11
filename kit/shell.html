@@ -1,0 +1,22 @@
+<meta charset="utf-8">
+<title>Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/*CSS*/
+</style>
+<div id="app">
+  <div id="hdr"><div class="brand"><i></i><span>Colour Detectives</span></div><div id="steps"></div><button id="mute" class="btn sm" data-a="mute" aria-label="Sound on or off" aria-pressed="false">🔊</button></div>
+  <div id="dev" hidden><b style="color:var(--orange)">Developer mode</b>
+    <label for="dsel">Go to</label><select id="dsel"></select>
+    <button class="btn sm" data-a="dgo">Go (fills earlier steps)</button>
+    <button class="btn sm" data-a="dfill">Fill this step</button>
+    <button class="btn sm" data-a="dnext">Fill + Next</button>
+    <button class="btn sm" data-a="dexit">Exit developer mode</button></div>
+  <main id="stage"></main>
+  <div id="bar" hidden><button class="btn" data-a="back" id="bBack">Back</button><div id="msg" role="status" aria-live="polite"></div><button class="btn pri" data-a="next" id="bNext">Next</button></div>
+</div>
+<div id="prt"></div>
+<script>
+/*JS*/
+</script>
