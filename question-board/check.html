@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Question Board: device check</title>
+<style>body{font-family:system-ui,Arial,sans-serif;max-width:640px;margin:0 auto;padding:14px;background:#10065e;color:#fff;font-size:18px}
+h1{font-size:24px;margin:6px 0}.row{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;margin:6px 0;border-radius:10px;background:rgba(255,255,255,.1)}
+.row b{min-width:64px}.ok b{color:#6dffa8}.bad b{color:#ff8a8a}.wait b{color:#ffe680}small{display:block;opacity:.8;font-size:14px}
+button{min-height:52px;font-size:18px;font-weight:700;border-radius:12px;border:2px solid #29b6ff;background:#29b6ff;color:#04003b;padding:6px 16px;margin:6px 6px 6px 0}
+pre{white-space:pre-wrap;background:#04003b;padding:10px;border-radius:10px;font-size:14px}
+#print{display:none}@media print{body{background:#fff;color:#000}#app{display:none}#print{display:block}}</style></head><body>
+<div id="app"><h1>Question Board: device check</h1><p>Wait about 10 seconds. Then take a screenshot of this page and send it to your teacher.</p>
+<div id="list"></div>
+<button id="ptest">Test PDF / Print</button><button id="again">Run again</button>
+<pre id="info"></pre></div>
+<div id="print"><h1>Print test</h1><p>If you can save this as a PDF, printing works on this device.</p></div>
+<script>
+const B='https://question-board.amitkaliden-qb.workers.dev',list=document.getElementById('list');
+function row(id,name){let e=document.getElementById(id);if(!e){e=document.createElement('div');e.id=id;list.appendChild(e);}return (st,msg)=>{e.className='row '+st;e.innerHTML='<b>'+({ok:'PASS',bad:'FAIL',wait:'...'}[st])+'</b><div>'+name+(msg?'<small>'+msg+'</small>':'')+'</div>';};}
+const to=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);
+const script=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('blocked'));document.head.appendChild(s);});
+async function run(){
+  list.innerHTML='';
+  const ua=navigator.userAgent;
+  document.getElementById('info').textContent='Browser: '+ua+'\nScreen: '+innerWidth+'x'+innerHeight+'  Touch points: '+navigator.maxTouchPoints+'\nTime: '+new Date().toISOString();
+  let r=row('t0','Page loaded from the real site');r(location.hostname==='amitkaliden-del.github.io'?'ok':'bad',location.hostname);
+  r=row('t1','Server answers (config)');r('wait');
+  try{const j=await to(fetch(B+'/api/config').then(x=>x.json()),8000);r(j.google&&j.titles?'ok':'bad','Modules: '+Object.keys(j.titles||{}).join(', ')+(j.turnstile?' | bot check on':' | bot check OFF'));}catch(e){r('bad',e.message);}
+  r=row('t2','Live connection (WebSocket)');r('wait');
+  try{await to(new Promise((res,rej)=>{const w=new WebSocket('wss://question-board.amitkaliden-qb.workers.dev/ws/A');w.onopen=()=>w.send('ping');w.onmessage=e=>{if(e.data==='pong'){w.close();res();}};w.onerror=()=>rej(new Error('connection failed'));}),8000);r('ok','ping and pong worked');}catch(e){r('bad',e.message+' (school WiFi may block live connections)');}
+  r=row('t3','Google sign-in script');r('wait');
+  try{await to(script('https://accounts.google.com/gsi/client'),8000);r('ok');}catch(e){r('bad',e.message);}
+  r=row('t4','Bot check script');r('wait');
+  try{await to(script('https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'),8000);r('ok');}catch(e){r('bad',e.message);}
+  r=row('t5','Saves your login for the session');
+  try{sessionStorage.setItem('qbchk','1');r(sessionStorage.getItem('qbchk')==='1'?'ok':'bad');sessionStorage.removeItem('qbchk');}catch(e){r('bad','private browsing or blocked');}
+  r=row('t6','Screen size is usable');r(Math.min(innerWidth,innerHeight)>=360?'ok':'bad',innerWidth+' x '+innerHeight);
+  r=row('t7','Touch screen');r(navigator.maxTouchPoints>0?'ok':'wait',navigator.maxTouchPoints>0?navigator.maxTouchPoints+' touch points':'No touch seen. Fine on a laptop.');
+  r=row('t8','Print / PDF available');r(typeof window.print==='function'?'ok':'bad','Now press the Test PDF button and try to save a PDF.');
+}
+document.getElementById('again').onclick=run;document.getElementById('ptest').onclick=()=>window.print();run();
+</script></body></html>
