@@ -12,7 +12,7 @@ pre{white-space:pre-wrap;background:#04003b;padding:10px;border-radius:10px;font
 <pre id="info"></pre></div>
 <div id="print"><h1>Print test</h1><p>If you can save this as a PDF, printing works on this device.</p></div>
 <script>
-const B='https://question-board.amitkaliden-qb.workers.dev',list=document.getElementById('list');
+const GAS='https://script.google.com/macros/s/AKfycbxlKSGZ1xXs3KbnwI8a0cfH0F0AlP9y3-sp1hD6W13vJcWotKiT2R4WoW8F0n5S0bMs/exec',B='https://question-board.amitkaliden-qb.workers.dev',list=document.getElementById('list');
 function row(id,name){let e=document.getElementById(id);if(!e){e=document.createElement('div');e.id=id;list.appendChild(e);}return (st,msg)=>{e.className='row '+st;e.innerHTML='<b>'+({ok:'PASS',bad:'FAIL',wait:'...'}[st])+'</b><div>'+name+(msg?'<small>'+msg+'</small>':'')+'</div>';};}
 const to=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);
 const script=src=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('blocked'));document.head.appendChild(s);});
@@ -25,6 +25,17 @@ async function run(){
   try{const j=await to(fetch(B+'/api/config').then(x=>x.json()),8000);r(j.google&&j.titles?'ok':'bad','Modules: '+Object.keys(j.titles||{}).join(', ')+(j.turnstile?' | bot check on':' | bot check OFF'));}catch(e){r('bad',e.message);}
   r=row('t2','Live connection (WebSocket)');r('wait');
   try{await to(new Promise((res,rej)=>{const w=new WebSocket('wss://question-board.amitkaliden-qb.workers.dev/ws/A');w.onopen=()=>w.send('ping');w.onmessage=e=>{if(e.data==='pong'){w.close();res();}};w.onerror=()=>rej(new Error('connection failed'));}),8000);r('ok','ping and pong worked');}catch(e){r('bad',e.message+' (school WiFi may block live connections)');}
+  if(GAS){r=row('g1','NEW server (Google Apps Script) answers');r('wait');
+    try{const t0=Date.now();const j=await to(fetch(GAS+'?p=/api/config',{redirect:'follow'}).then(x=>x.json()),15000);r(j.google&&j.titles?'ok':'bad','Answered in '+(Date.now()-t0)+' ms');}catch(e){r('bad',e.message);}
+    r=row('g2','NEW server: a post-style request works');r('wait');
+    try{const j=await to(fetch(GAS,{method:'POST',redirect:'follow',body:JSON.stringify({p:'/api/poll',session:'x'})}).then(x=>x.json()),15000);r(j&&j.ok===false?'ok':'bad','Server replied (expected: sign in needed)');}catch(e){r('bad',e.message);}}
+  r=row('g3','Google sign-in button draws');r('wait');
+  try{await to(script('https://accounts.google.com/gsi/client'),8000);
+    const holder=document.createElement('div');holder.style.cssText='position:absolute;left:-9999px;top:0;width:300px';document.body.appendChild(holder);
+    google.accounts.id.initialize({client_id:'599933335439-djjqe021l13q2tnnsu3fm698v591c5ju.apps.googleusercontent.com',callback:()=>{}});
+    google.accounts.id.renderButton(holder,{theme:'filled_blue',size:'large',width:280});
+    await to(new Promise((res,rej)=>{let n=0;const iv=setInterval(()=>{if(holder.querySelector('iframe,div[role=button]')){clearInterval(iv);res();}else if(++n>30){clearInterval(iv);rej(new Error('timeout'));}},250);}),9000);
+    r('ok','Button appeared');}catch(e){r('bad','Button did not draw: '+e.message);}
   r=row('t3','Google sign-in script');r('wait');
   try{await to(script('https://accounts.google.com/gsi/client'),8000);r('ok');}catch(e){r('bad',e.message);}
   r=row('t4','Bot check script');r('wait');

@@ -193,79 +193,72 @@ const CLASSES=['A','B','C','D','E','F','G','H'];
 const COLORS={A:'#FFE680',B:'#FFB3C7',C:'#A8E6CF',D:'#A8D8FF',E:'#D7B8FF',F:'#FFC999',G:'#C5E86C',H:'#FFA8A0'};
 const MODULES=[22,23,24,25,27];
 const MAXLEN=150,MINLEN=5,MAXANS=300,IDLE_MS=300000,RATE_MS=20000;
-const BACKEND='https://question-board.amitkaliden-qb.workers.dev';
-const WSB=BACKEND.replace(/^http/,'ws');
+const BACKEND='https://script.google.com/macros/s/AKfycbxlKSGZ1xXs3KbnwI8a0cfH0F0AlP9y3-sp1hD6W13vJcWotKiT2R4WoW8F0n5S0bMs/exec';
 const CFG={google:'',turnstile:''};
 const MODTITLE={}; // Amit fills these in Settings
 
 /* =====================================================================
-   NETWORK  (Cloudflare Worker: all rules are checked there, this page only shows results)
+   NETWORK  (Google Apps Script: all rules are checked there, this page only shows results)
    ===================================================================== */
 const store={get(){try{return sessionStorage.getItem('qb_s')||'';}catch(e){return '';}},set(v){try{v?sessionStorage.setItem('qb_s',v):sessionStorage.removeItem('qb_s');}catch(e){}}};
 async function api(path,body){
-  const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),12000);
+  // Apps Script rules: no custom headers, so the body is plain text (no CORS preflight); the session travels in the body.
+  const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),20000);
   try{
-    const r=await fetch(BACKEND+path,{signal:ac.signal,method:body?'POST':'GET',headers:Object.assign({'content-type':'application/json'},S.session?{Authorization:'Bearer '+S.session}:{}),body:body?JSON.stringify(body):undefined});
-    const j=await r.json().catch(()=>({}));j.status=r.status;clearTimeout(tm);return j;
-  }catch(e){clearTimeout(tm);return {ok:false,status:0,msg:'No connection. Check the WiFi and try again.'};}
+    let r;
+    if(path!=='/api/config'){r=await fetch(BACKEND,{signal:ac.signal,method:'POST',redirect:'follow',body:JSON.stringify(Object.assign({p:path,session:S.session},body||{}))});}
+    else{r=await fetch(BACKEND+'?p='+encodeURIComponent(path),{signal:ac.signal,redirect:'follow'});}
+    const j=await r.json().catch(()=>({}));j.http=r.status;clearTimeout(tm);return j;
+  }catch(e){clearTimeout(tm);return {ok:false,http:0,msg:'No connection. Check the WiFi and try again.'};}
 }
-const SOCK={};
-function wsOpen(c){const s=SOCK[c];return !!(s&&s.ws&&s.ws.readyState===1);}
+/* The board updates by asking the server every few seconds (the school network blocks live connections). */
+const POLL={t:null,busy:false,again:false,gen:0,fails:0,since:{},live:false};
+const POLL_MS_STUDENT=10000,POLL_MS_TEACHER=8000,POLL_JIT=2000;
 function setNet(){
-  const want=S.role==='teacher'?CLASSES:(S.role==='student'&&S.user?[S.user.cls]:[]);
-  const bad=!S.asleep&&want.length&&want.some(c=>!wsOpen(c));
+  const bad=!S.asleep&&POLL.live&&POLL.fails>=2;
   const n=$('#net');if(n){n.textContent='Reconnecting...';n.classList.toggle('on',!!bad);}
 }
-function openSock(c){
-  const s=SOCK[c]||(SOCK[c]={ws:null,tries:0,t:null,hb:null,pong:0,live:true});
-  s.live=true;let ws;
-  try{ws=new WebSocket(WSB+'/ws/'+c);}catch(e){retry(c);return;}
-  s.ws=ws;
-  ws.onopen=()=>{
-    ws.send(JSON.stringify({t:'auth',s:S.session}));s.tries=0;s.pong=Date.now();
-    clearInterval(s.hb);
-    s.hb=setInterval(()=>{if(ws.readyState!==1)return;if(Date.now()-s.pong>45000){try{ws.close();}catch(e){}return;}try{ws.send('ping');}catch(e){}},20000);
-    setNet();
-  };
-  ws.onmessage=ev=>{
-    if(ev.data==='pong'){s.pong=Date.now();return;}
-    let m;try{m=JSON.parse(ev.data);}catch(e){return;}
-    onMsg(c,m);
-  };
-  ws.onclose=ev=>{
-    clearInterval(s.hb);if(s.ws!==ws)return;s.ws=null;setNet();
-    if(ev.code===4401){onAuthLost();return;}
-    if(ev.code===4402){onReset();return;}
-    if(s.live&&!S.asleep)retry(c);
-  };
-  ws.onerror=()=>{};
-}
-function retry(c){
-  const s=SOCK[c];if(!s||!s.live)return;
-  s.tries++;clearTimeout(s.t);
-  s.t=setTimeout(()=>{if(s.live&&!S.asleep)openSock(c);},Math.min(15000,800*Math.pow(2,Math.min(s.tries,5))));
-}
-function closeAll(){
-  Object.keys(SOCK).forEach(c=>{const s=SOCK[c];s.live=false;clearTimeout(s.t);clearInterval(s.hb);if(s.ws){const w=s.ws;s.ws=null;try{w.close();}catch(e){}}});
-  setNet();
-}
+function stopPoll(){POLL.gen++;POLL.live=false;clearTimeout(POLL.t);POLL.t=null;setNet();}
+function closeAll(){stopPoll();}
 function connectAll(){
-  closeAll();
-  const list=S.role==='teacher'?CLASSES:[S.user.cls];
-  list.forEach(openSock);
+  closeAll();POLL.live=true;POLL.fails=0;POLL.since={};POLL.busy=false;POLL.again=false;
+  pollNow();
 }
+function nextPoll(ms){
+  clearTimeout(POLL.t);
+  if(!POLL.live||S.asleep)return;
+  const base=S.role==='teacher'?POLL_MS_TEACHER:POLL_MS_STUDENT;
+  const wait=ms!=null?ms:base+Math.floor(Math.random()*POLL_JIT)+Math.min(POLL.fails,5)*3000;
+  POLL.t=setTimeout(pollNow,wait);
+}
+async function pollNow(){
+  if(!POLL.live||S.asleep)return;
+  if(document.hidden){nextPoll(3000);return;}
+  if(POLL.busy){POLL.again=true;return;}
+  POLL.busy=true;const gen=POLL.gen;
+  let r;
+  try{
+    if(S.role==='teacher')r=await api('/api/pollall',{since:POLL.since});
+    else if(S.role==='student'&&S.user)r=await api('/api/poll',{cls:S.user.cls,since:POLL.since[S.user.cls]||0});
+    else{POLL.busy=false;return;}
+  }finally{if(gen===POLL.gen)POLL.busy=false;}
+  if(gen!==POLL.gen||!POLL.live)return; // signed out or switched user while this was in flight
+  if(r.code==='auth'){onAuthLost();return;}
+  if(r.code==='reset'){onReset();return;}
+  if(!r.ok){POLL.fails++;setNet();nextPoll();return;}
+  POLL.fails=0;setNet();
+  if(S.role==='teacher'){
+    Object.keys(r.classes||{}).forEach(c=>{const x=r.classes[c];POLL.since[c]=x.v;if(!x.same)applyPosts(c,x.posts);});
+  }else if(r.cls){POLL.since[r.cls]=r.v;if(!r.same)applyPosts(r.cls,r.posts);}
+  if(POLL.again){POLL.again=false;nextPoll(0);}else nextPoll();
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&POLL.live&&!S.asleep)nextPoll(300);});
+function applyPosts(c,posts){dropClass(c);(posts||[]).forEach(p=>S.posts.set(c+p.n,Object.assign({},p,{id:c+p.n,cls:c})));sched();}
 function sched(){
   if(S._r)return;
   S._r=requestAnimationFrame(()=>{S._r=0;if(S.role==='student'||S.role==='teacher')refresh();});
 }
 function dropClass(c){[...S.posts.keys()].forEach(k=>{if(S.posts.get(k).cls===c)S.posts.delete(k);});}
-function onMsg(c,m){
-  if(m.t==='init'){dropClass(c);m.posts.forEach(p=>S.posts.set(c+p.n,Object.assign({},p,{id:c+p.n,cls:c})));sched();}
-  else if(m.t==='upsert'){const p=m.post;S.posts.set(c+p.n,Object.assign({},p,{id:c+p.n,cls:c}));sched();}
-  else if(m.t==='remove'){S.posts.delete(c+m.n);sched();}
-  else if(m.t==='clear'){dropClass(c);sched();}
-  else if(m.t==='res'){onRes(m);}
-}
 function onAuthLost(){signOut('Please sign in again.');}
 function onReset(){closeAll();S.user=null;S.role='setup';S.pick=null;S.err='';S.posts.clear();renderShell();toast('Your teacher reset your setup. Do it again.');}
 async function loadConfig(){
@@ -274,10 +267,11 @@ async function loadConfig(){
   return r;
 }
 async function loadUsers(){const r=await api('/api/users');if(r.ok){S.users=r.users;if(S.role==='teacher'&&S.tab==='set')refresh(true);}}
-function tsend(key,type,extra){
+async function tsend(key,type,extra){
   const p=S.posts.get(key);if(!p)return;
-  const s=SOCK[p.cls];if(!s||!s.ws||s.ws.readyState!==1){toast('Not connected. Try again in a moment.');return;}
-  s.ws.send(JSON.stringify(Object.assign({t:type,n:p.n},extra||{})));
+  const r=await api(type==='report'?'/api/report':'/api/t',Object.assign({cls:p.cls,t:type,n:p.n},extra||{}));
+  if(!r.ok){toast(r.msg||'Not saved. Try again.');return;}
+  POLL.since[p.cls]=0;pollNow();
 }
 
 /* sign in */
@@ -536,7 +530,7 @@ document.addEventListener('click',async e=>{
       el.disabled=true;
       const r=await api('/api/profile',{cls:S.pick,name,sid,ts:S.tsToken});
       el.disabled=false;
-      if(r.status===401){signOut('Please sign in again.');break;}
+      if(r.code==='auth'){signOut('Please sign in again.');break;}
       if(!r.ok){S.err=r.msg||'Something went wrong. Try again.';const x=$('#err');if(x)x.textContent=S.err;try{if(window.turnstile)turnstile.reset();}catch(e2){}S.tsToken='';break;}
       S.user=r.profile;S.role='student';S.module=22;setMsg('');renderShell();connectAll();break;
     }
@@ -560,7 +554,7 @@ document.addEventListener('click',async e=>{
       modal('Answer this question','<p class="fine" style="color:#cfc4ff">'+esc(p.text)+'</p><textarea class="inp" id="ans" rows="4" maxlength="'+MAXANS+'">'+esc(p.answer)+'</textarea>','Save answer',()=>tsend(id,'answer',{text:$('#ans').value}));break;}
     case 'resetUser':{const r=await api('/api/reset',{sub:id});toast(r.ok?'Reset. The student does setup again.':(r.msg||'Could not reset.'));loadUsers();break;}
     case 'exportCsv':exportCsv();break;
-    case 'clearAll':modal('Clear all posts?','<p>Export first. Type <b>CLEAR</b> to confirm.</p><input class="inp" id="cf" autocomplete="off">','Clear all',()=>{if($('#cf').value.trim()==='CLEAR'){CLASSES.forEach(c=>{const s=SOCK[c];if(s&&s.ws&&s.ws.readyState===1)s.ws.send(JSON.stringify({t:'clear'}));});toast('Cleared');}else toast('Not cleared. Type CLEAR.');},true);break;
+    case 'clearAll':modal('Clear all posts?','<p>Export first. Type <b>CLEAR</b> to confirm.</p><input class="inp" id="cf" autocomplete="off">','Clear all',()=>{if($('#cf').value.trim()==='CLEAR'){Promise.all(CLASSES.map(c=>api('/api/t',{cls:c,t:'clear'}))).then(rs=>{POLL.since={};pollNow();toast(rs.every(x=>x.ok)?'Cleared':'Some classes did not clear. Try again.');});}else toast('Not cleared. Type CLEAR.');},true);break;
     case 'mok':{const f=modal.ok;closeModal();if(f)f();break;}
     case 'mcancel':closeModal();break;
     case 'motion':document.body.classList.toggle('still');renderShell();break;
@@ -573,7 +567,7 @@ document.addEventListener('input',e=>{
   if(e.target.id==='qtext')upd();
   if(e.target.dataset&&e.target.dataset.mod){
     MODTITLE[e.target.dataset.mod]=e.target.value.trim();
-    clearTimeout(S.tt);S.tt=setTimeout(()=>{const t={};MODULES.forEach(m=>{t[m]=MODTITLE[m]||'';});api('/api/config',{titles:t});},700);
+    clearTimeout(S.tt);S.tt=setTimeout(()=>{const t={};MODULES.forEach(m=>{t[m]=MODTITLE[m]||'';});api('/api/settitles',{titles:t});},700);
   }
 });
 document.addEventListener('keydown',e=>{
@@ -581,15 +575,21 @@ document.addEventListener('keydown',e=>{
   if(e.target.id==='qtext'&&e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(!$('#pbtn').disabled)doPost();}
   if(e.key==='Escape')closeModal();
 });
-function doPost(){
+async function doPost(){
   const q=$('#qtext');
-  if(!wsOpen(S.user.cls)){setMsg('Not connected yet. Wait a moment and try again.','bad');return;}
-  $('#pbtn').disabled=true;
-  SOCK[S.user.cls].ws.send(JSON.stringify({t:'post',module:S.module,text:q.value}));
+  if(!POLL.live){setMsg('Not connected yet. Wait a moment and try again.','bad');return;}
+  $('#pbtn').disabled=true;setMsg('Posting...','');
+  const ua=navigator.userAgent||'';
+  const dev=/iPad/.test(ua)?'iPad':/iPhone/.test(ua)?'iPhone':/Android/.test(ua)?'Android':/Macintosh/.test(ua)?'Mac':/Windows/.test(ua)?'Windows':'Other';
+  const r=await api('/api/post',{module:S.module,text:q.value,dev});
+  if(r.code==='reset'){onReset();return;}
+  if(r.code==='auth'){onAuthLost();return;}
+  onRes(r);
+  if(r.ok){POLL.since[S.user.cls]=0;pollNow();}
 }
 function onRes(m){
   upd();
-  if(!m.ok){setMsg(m.msg,'bad');return;}
+  if(!m.ok){setMsg(m.msg||'Could not post. Try again.','bad');return;}
   const q=$('#qtext');if(q){q.value='';upd();}
   setMsg(m.status==='live'?'Posted! Everyone in your class can see it.':'Sent. Your teacher must check this one first.','good');
 }
