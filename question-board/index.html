@@ -203,10 +203,11 @@ const MODTITLE={}; // Amit fills these in Settings
    ===================================================================== */
 const store={get(){try{return sessionStorage.getItem('qb_s')||'';}catch(e){return '';}},set(v){try{v?sessionStorage.setItem('qb_s',v):sessionStorage.removeItem('qb_s');}catch(e){}}};
 async function api(path,body){
+  const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),12000);
   try{
-    const r=await fetch(BACKEND+path,{method:body?'POST':'GET',headers:Object.assign({'content-type':'application/json'},S.session?{Authorization:'Bearer '+S.session}:{}),body:body?JSON.stringify(body):undefined});
-    const j=await r.json().catch(()=>({}));j.status=r.status;return j;
-  }catch(e){return {ok:false,status:0,msg:'No connection. Check the WiFi and try again.'};}
+    const r=await fetch(BACKEND+path,{signal:ac.signal,method:body?'POST':'GET',headers:Object.assign({'content-type':'application/json'},S.session?{Authorization:'Bearer '+S.session}:{}),body:body?JSON.stringify(body):undefined});
+    const j=await r.json().catch(()=>({}));j.status=r.status;clearTimeout(tm);return j;
+  }catch(e){clearTimeout(tm);return {ok:false,status:0,msg:'No connection. Check the WiFi and try again.'};}
 }
 const SOCK={};
 function wsOpen(c){const s=SOCK[c];return !!(s&&s.ws&&s.ws.readyState===1);}
@@ -269,7 +270,7 @@ function onAuthLost(){signOut('Please sign in again.');}
 function onReset(){closeAll();S.user=null;S.role='setup';S.pick=null;S.err='';S.posts.clear();renderShell();toast('Your teacher reset your setup. Do it again.');}
 async function loadConfig(){
   const r=await api('/api/config');
-  if(r&&r.google!==undefined){CFG.google=r.google;CFG.turnstile=r.turnstile;Object.keys(MODTITLE).forEach(k=>delete MODTITLE[k]);Object.assign(MODTITLE,r.titles||{});}
+  if(r&&r.google!==undefined){CFG.loaded=true;CFG.google=r.google;CFG.turnstile=r.turnstile;Object.keys(MODTITLE).forEach(k=>delete MODTITLE[k]);Object.assign(MODTITLE,r.titles||{});}
   return r;
 }
 async function loadUsers(){const r=await api('/api/users');if(r.ok){S.users=r.users;if(S.role==='teacher'&&S.tab==='set')refresh(true);}}
@@ -285,6 +286,7 @@ function loadScript(src){
 }
 async function initGoogle(){
   const el=$('#gbtn');if(!el)return;
+  if(!CFG.loaded)return;
   if(!CFG.google){el.innerHTML='<p class="err">Sign-in is not ready. Reload the page.</p>';return;}
   if(!(window.google&&google.accounts)){const ok=await loadScript('https://accounts.google.com/gsi/client');if(!ok||!window.google){const e=$('#gbtn');if(e)e.innerHTML='<p class="err">Google sign-in did not load. Check the WiFi and reload.</p>';return;}}
   const e2=$('#gbtn');if(!e2)return;
@@ -371,7 +373,7 @@ function hdr(mid){
 }
 function loginHTML(){
   return hdr()+'<div class="center"><div class="card"><h1>Ask it. Post it.</h1><p>The Unit 6 class wall. Post your questions about the human body.</p>'+
-   '<div id="gbtn" style="display:flex;justify-content:center;min-height:44px"></div><p class="err" id="lmsg" role="status"></p>'+
+   (S.cfgErr?'<p class="err" role="alert">Cannot reach the board. Check the WiFi, then tap Try again. If it keeps failing, tell your teacher.</p><button class="btn pri" data-act="retry" style="width:100%;min-height:56px">Try again</button>':'<div id="gbtn" style="display:flex;justify-content:center;min-height:44px"></div>')+'<p class="err" id="lmsg" role="status"></p>'+
    '<p class="fine" style="margin-top:12px">First time: you pick your class and type your name and ID. After that you go straight to your board.</p>'+
    '<p class="fine">Use your school Google account.</p></div></div>';
 }
@@ -563,6 +565,7 @@ document.addEventListener('click',async e=>{
     case 'mcancel':closeModal();break;
     case 'motion':document.body.classList.toggle('still');renderShell();break;
     case 'pdf':buildPrint();try{window.print();}catch(err){toast('Open the page in Safari to save a PDF.');}break;
+    case 'retry':(async()=>{S.cfgErr=false;loginMsg('Trying...');const c=await loadConfig();if(!(c&&c.google!==undefined))S.cfgErr=true;renderShell();})();break;
     case 'wake':document.body.classList.remove('asleep');S.asleep=false;S.lastAct=Date.now();if(S.role==='student'||S.role==='teacher'){loadConfig().then(()=>refresh(true));connectAll();}refresh(true);break;
   }
 });
@@ -597,7 +600,9 @@ function sleepNow(){S.asleep=true;closeAll();document.body.classList.add('asleep
 setInterval(()=>{if(!S.asleep&&S.role!=='login'&&Date.now()-S.lastAct>IDLE_MS)sleepNow();},5000);
 
 (async function boot(){
-  await loadConfig();
+  S.cfgErr=false;renderShell();
+  const c=await loadConfig();
+  if(!(c&&c.google!==undefined)){S.cfgErr=true;renderShell();return;}
   if(S.session){
     const r=await api('/api/me',{});
     if(r.ok){enter(r);return;}
